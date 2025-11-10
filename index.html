@@ -5,28 +5,138 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Oakstone Smart Savings Snapshot</title>
   <style>
-    body { font-family: Arial, sans-serif; margin:0; padding:0; background:#f7f7f7; color:#333; }
-    header { background: #0D3B66; color:white; padding:20px; display:flex; align-items:center; }
-    header img { height:50px; margin-right:10px; }
-    header h1 { font-size:22px; margin:0; }
-    .container { max-width:900px; margin:20px auto; padding:20px; background:white; box-shadow:0 2px 4px rgba(0,0,0,0.1); border-radius:8px; }
-    label { display:block; margin:8px 0 4px; }
-    input[type="text"], input[type="number"], select { width:100%; padding:8px; border:1px solid #ccc; border-radius:4px; }
-    .row { display:flex; flex-wrap:wrap; gap:10px; }
-    .col { flex:1; min-width:200px; }
-    button { background:#007BFF; border:none; color:white; padding:10px 20px; margin-top:10px; border-radius:4px; cursor:pointer; }
-    button:hover { background:#0056b3; }
-    .borrower-view { display:none; margin-top:30px; }
-    .cards { display:flex; flex-wrap:wrap; gap:10px; }
-    .card { flex:1; min-width:200px; background:#f5f5f5; padding:15px; border-radius:6px; text-align:center; }
-    .impact { font-size:24px; font-weight:bold; margin-top:10px; }
-    .toggle-buttons { margin-top:10px; }
-    .toggle-buttons button { background:#e0e0e0; color:#333; margin-right:5px; }
-    .toggle-buttons .active { background:#007BFF; color:white; }
-    #costDetails { display:none; margin-top:10px; background:#f0f0f0; padding:10px; border-radius:4px; font-size:14px; }
-    .chart-container { margin-top:20px; }
-    footer { margin-top:30px; font-size:12px; color:#666; text-align:center; }
-    @media(max-width:600px) { .row { flex-direction:column; } .cards { flex-direction:column; } }
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #000;
+      color: #fff;
+    }
+    header {
+      background: #000;
+      color: white;
+      padding: 20px;
+      display: flex;
+      align-items: center;
+    }
+    header img {
+      height: 50px;
+      margin-right: 10px;
+    }
+    header h1 {
+      font-size: 22px;
+      margin: 0;
+    }
+    .container {
+      max-width: 900px;
+      margin: 20px auto;
+      padding: 20px;
+      background: #1f1f1f;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+      border-radius: 8px;
+      color: #fff;
+    }
+    label {
+      display: block;
+      margin: 8px 0 4px;
+    }
+    input[type="text"], input[type="number"], select {
+      width: 100%;
+      padding: 8px;
+      background: #333;
+      color: #fff;
+      border: 1px solid #555;
+      border-radius: 4px;
+    }
+    .row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .col {
+      flex: 1;
+      min-width: 200px;
+    }
+    button {
+      background: #007BFF;
+      border: none;
+      color: white;
+      padding: 10px 20px;
+      margin-top: 10px;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    .borrower-view {
+      display: none;
+      margin-top: 30px;
+    }
+    .cards {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+    .card {
+      flex: 1;
+      min-width: 200px;
+      background: #2a2a2a;
+      padding: 15px;
+      border-radius: 6px;
+      text-align: center;
+      color: #fff;
+    }
+    .impact {
+      font-size: 24px;
+      font-weight: bold;
+      margin-top: 10px;
+    }
+    /* highlight savings in green */
+    #savingsDisplay {
+      color: #28a745;
+    }
+    .toggle-buttons {
+      margin-top: 10px;
+    }
+    .toggle-buttons button {
+      background: #444;
+      color: #fff;
+      margin-right: 5px;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 4px;
+    }
+    .toggle-buttons .active {
+      background: #007BFF;
+      color: white;
+    }
+    #costDetails {
+      display: none;
+      margin-top: 10px;
+      background: #333;
+      padding: 10px;
+      border-radius: 4px;
+      font-size: 14px;
+      color: #fff;
+    }
+    .chart-container {
+      margin-top: 20px;
+    }
+    footer {
+      margin-top: 30px;
+      font-size: 12px;
+      color: #888;
+      text-align: center;
+    }
+    @media(max-width: 600px) {
+      .row {
+        flex-direction: column;
+      }
+      .cards {
+        flex-direction: column;
+      }
+    }
   </style>
 </head>
 <body>
@@ -46,7 +156,7 @@
       <div class="col"><label>Current Years Remaining</label><input type="number" id="currentTerm" value="25"></div>
     </div>
     <div class="row">
-      <div class="col"><label>Current Taxes + Insurance + HOA + MI (monthly)</label><input type="number" id="currentMonthlyOther" value="500"></div>
+      <div class="col"><label>Current Taxes + Insurance + MI (monthly)</label><input type="number" id="currentMonthlyOther" value="500"></div>
       <div class="col"><label>Current Monthly Payment (P&I)</label><input type="number" id="currentPI" readonly></div>
     </div>
     <hr>
@@ -58,7 +168,7 @@
       <div class="col"><label>New Term (years)</label><input type="number" id="newTerm" value="30"></div>
     </div>
     <div class="row">
-      <div class="col"><label>New Taxes + Insurance + HOA (monthly)</label><input type="number" id="newMonthlyOther" value="500"></div>
+      <div class="col"><label>New Taxes + Insurance (monthly)</label><input type="number" id="newMonthlyOther" value="500"></div>
       <div class="col"><label>New MI/MIP (monthly)</label><input type="number" id="newMI" value="0"></div>
       <div class="col"><label>Funding Fee (%)</label><input type="number" id="fundingFee" value="0" step="0.001"></div>
     </div>
@@ -91,6 +201,53 @@
       const feeInput = document.getElementById('fundingFee');
       switch(t) { case 'va_irrrl': feeInput.value = 0.5; break; case 'va_cashout': feeInput.value = 2.15; break; case 'fha': feeInput.value = 1.75; break; case 'fha_cashout': feeInput.value = 1.75; break; default: feeInput.value = 0; }
     });
+
+    // Parse query parameters from the URL into an object
+    function getParams() {
+      const params = {};
+      const query = window.location.search.substring(1);
+      if(query) {
+        query.split("&").forEach(function(pair) {
+          const [k, v] = pair.split("=");
+          params[decodeURIComponent(k)] = decodeURIComponent(v || "");
+        });
+      }
+      return params;
+    }
+
+    // Initialize the form based on query parameters and hide the LO workspace for borrower view
+    function initFromParams() {
+      const params = getParams();
+      if(Object.keys(params).length === 0) {
+        return;
+      }
+      // Populate standard input fields
+      const fieldList = ['borrowerName','propertyAddress','currentBalance','currentRate','currentTerm','currentMonthlyOther','newLoanAmount','newRate','newTerm','newMonthlyOther','newMI','fundingFee','loanType'];
+      fieldList.forEach(function(id) {
+        if(params[id] !== undefined) {
+          const el = document.getElementById(id);
+          if(el) {
+            el.value = params[id];
+          }
+        }
+      });
+      // Populate checkbox fields
+      ['fundingFeeExempt','defaultSimple','allowCosts','showChart'].forEach(function(id) {
+        if(params[id] !== undefined) {
+          const el = document.getElementById(id);
+          if(el) {
+            el.checked = (params[id] === 'true');
+          }
+        }
+      });
+      // Hide the loan officer workspace: title, rows, hr, headings, and buttons (except borrower view)
+      const elementsToHide = document.querySelectorAll('.container h2, .container > div.row, .container > hr, .container > h3, .container > button');
+      elementsToHide.forEach(function(el) {
+        el.style.display = 'none';
+      });
+      // Show borrower view and compute automatically
+      calculateLoan();
+    }
     function calculatePI(bal, rate, years) {
       bal = parseFloat(bal); rate = parseFloat(rate); years = parseFloat(years);
       const r = rate/100/12;
@@ -179,9 +336,41 @@
       }
     }
     function generateLink() {
-      alert('This static site can be shared by copying the URL once deployed.');
+      // Build a shareable link by encoding the current input values as query parameters
+      const baseUrl = window.location.origin + window.location.pathname;
+      const params = new URLSearchParams();
+      // List of fields to include in the query string
+      const ids = ['borrowerName','propertyAddress','currentBalance','currentRate','currentTerm','currentMonthlyOther','newLoanAmount','newRate','newTerm','newMonthlyOther','newMI','fundingFee','loanType'];
+      ids.forEach(function(id) {
+        const el = document.getElementById(id);
+        if(el) {
+          params.set(id, el.value);
+        }
+      });
+      // Include checkbox states
+      ['fundingFeeExempt','defaultSimple','allowCosts','showChart'].forEach(function(id) {
+        const el = document.getElementById(id);
+        if(el) {
+          params.set(id, el.checked);
+        }
+      });
+      const shareUrl = baseUrl + '?' + params.toString();
+      // Copy the URL to clipboard if possible; otherwise present in a prompt
+      if(navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(shareUrl).then(function() {
+          alert('Share link copied to clipboard:\n' + shareUrl);
+        }).catch(function() {
+          prompt('Copy your share link:', shareUrl);
+        });
+      } else {
+        prompt('Copy your share link:', shareUrl);
+      }
     }
-    window.onload = calculateLoan;
+    // On page load, initialize from query parameters (if any) and compute default values
+    window.onload = function() {
+      initFromParams();
+      calculateLoan();
+    };
   </script>
 </body>
 </html>
