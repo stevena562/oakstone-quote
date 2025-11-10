@@ -179,6 +179,15 @@
       <div class="col"><label><input type="checkbox" id="showChart"> Include "Why this works" chart</label></div>
     </div>
 
+    <!-- Additional costs and credits inputs for the loan officer -->
+    <h3>Costs & Credits</h3>
+    <div class="row">
+      <div class="col"><label>Origination / Points ($)</label><input type="number" id="costOrig" value="0" step="0.01"></div>
+      <div class="col"><label>Title & Recording ($)</label><input type="number" id="costTitle" value="0" step="0.01"></div>
+      <div class="col"><label>Lender Credit ($)</label><input type="number" id="lenderCredit" value="0" step="0.01"></div>
+      <div class="col"><label>Apply Link (URL)</label><input type="text" id="applyLink" value=""></div>
+    </div>
+
     <!-- Loan Officer information fields -->
     <h3>Loan Officer Information</h3>
     <div class="row">
@@ -197,7 +206,7 @@
       <div class="cards">
         <!-- Rate comparison card shows Current → New rate -->
         <div class="card"><div>Rate (Current → New)</div><div class="impact" id="rateCompareDisplay">0% → 0%</div></div>
-        <div class="card"><div>New Monthly (incl. taxes & ins)</div><div class="impact" id="newMonthlyDisplay">$0</div></div>
+        <div class="card"><div>New Payment (P&I / Total)</div><div class="impact" id="newPaymentDisplay">$0</div></div>
         <div class="card"><div id="impactLabel">Savings per Month</div><div class="impact" id="savingsDisplay">$0</div></div>
         <div class="card" id="cashoutCard" style="display:none;"><div>Cash Out</div><div class="impact" id="cashoutDisplay">$0</div></div>
       </div>
@@ -205,6 +214,8 @@
       <div id="costDetails"><strong>Estimated Cost Breakdown:</strong><p id="costText"></p><p id="aprLine"></p></div>
       <!-- Loan officer contact information displayed for borrower -->
       <div id="loContact" style="margin-top:12px;font-size:0.85em;line-height:1.3;"></div>
+      <!-- Apply now button will appear here when provided -->
+      <div id="applyContainer" style="margin-top:12px;"></div>
       <div class="chart-container" id="chartContainer" style="display:none;"><canvas id="balanceChart" width="400" height="200"></canvas></div>
       <footer>NMLS #2585868 · Equal Housing Lender · Oakstone Capital Mortgage</footer>
     </div>
@@ -227,6 +238,24 @@
       }
     });
 
+    // Automatically recalculate when cost and credit inputs change
+    ['costOrig','costTitle','lenderCredit'].forEach(function(id) {
+      const el = document.getElementById(id);
+      if (el) {
+        el.addEventListener('input', function() {
+          calculateLoan();
+        });
+      }
+    });
+
+    // Recalculate display when apply link is changed (to show/hide button)
+    const applyLinkInput = document.getElementById('applyLink');
+    if(applyLinkInput) {
+      applyLinkInput.addEventListener('input', function() {
+        calculateLoan();
+      });
+    }
+
     // Parse query parameters from the URL into an object
     function getParams() {
       const params = {};
@@ -247,7 +276,7 @@
         return;
       }
       // Populate standard input fields
-      const fieldList = ['borrowerName','propertyAddress','currentBalance','currentRate','currentTerm','currentMonthlyOther','newLoanAmount','newRate','newTerm','newMonthlyOther','newMI','fundingFee','loanType','loName','loPhone','loEmail','loReviews'];
+      const fieldList = ['borrowerName','propertyAddress','currentBalance','currentRate','currentTerm','currentMonthlyOther','newLoanAmount','newRate','newTerm','newMonthlyOther','newMI','fundingFee','loanType','loName','loPhone','loEmail','loReviews','costOrig','costTitle','lenderCredit','applyLink'];
       fieldList.forEach(function(id) {
         if(params[id] !== undefined) {
           const el = document.getElementById(id);
@@ -307,6 +336,12 @@
       const allowCosts = document.getElementById('allowCosts').checked;
       const defaultSimple = document.getElementById('defaultSimple').checked;
       const showChart = document.getElementById('showChart').checked;
+      // Costs and credits input
+      const costOrig = parseFloat(document.getElementById('costOrig').value) || 0;
+      const costTitle = parseFloat(document.getElementById('costTitle').value) || 0;
+      const lenderCredit = parseFloat(document.getElementById('lenderCredit').value) || 0;
+      // Application link
+      const applyLinkVal = document.getElementById('applyLink').value;
       const currPI = calculatePI(currBal, currRate, currTerm);
       document.getElementById('currentPI').value = currPI.toFixed(2);
       const currTotal = currPI + currOther;
@@ -327,8 +362,11 @@
         const newRateTxt = isNaN(newRate) ? '—' : newRate.toFixed(3) + '%';
         rateCompareEl.textContent = curRateTxt + ' → ' + newRateTxt;
       }
-      // Update new monthly payment and savings/increase
-      document.getElementById('newMonthlyDisplay').textContent = '$' + newTotal.toFixed(2);
+      // Update new monthly payment and savings/increase (show P&I and Total)
+      const newPaymentEl = document.getElementById('newPaymentDisplay');
+      if(newPaymentEl) {
+        newPaymentEl.textContent = '$' + newPI.toFixed(2) + ' / $' + newTotal.toFixed(2);
+      }
       document.getElementById('impactLabel').textContent = savings >= 0 ? 'Saves per Month' : 'Increase per Month';
       document.getElementById('savingsDisplay').textContent = '$' + Math.abs(savings).toFixed(2);
       // Show or hide cashout card
@@ -348,9 +386,33 @@
       }
       document.getElementById('benefitLine').textContent = benefit;
       // Update cost details
-      document.getElementById('costText').textContent = 'Program Fee: $' + additionalFee.toFixed(2) + ' (included in loan)';
-      document.getElementById('aprLine').textContent = '';
-      document.getElementById('costDetails').style.display = allowCosts ? 'block' : 'none';
+      // Compute cost breakdown (origination, title/recording, program fee, lender credit)
+      const totalCosts = costOrig + costTitle + additionalFee;
+      const netCosts = totalCosts - lenderCredit;
+      const costDetailsEl = document.getElementById('costDetails');
+      if(costDetailsEl) {
+        if(allowCosts) {
+          // Build concise cost summary highlighting lender credit
+          let costHtml = '';
+          costHtml += 'Total Costs: <strong>$' + totalCosts.toFixed(2) + '</strong>';
+          if(lenderCredit > 0) {
+            costHtml += ' · Lender Credit: <strong style="color:#28a745;">$' + lenderCredit.toFixed(2) + '</strong>';
+          }
+          costHtml += ' · Net Cost: <strong>$' + netCosts.toFixed(2) + '</strong>';
+          costHtml += '<br><span style="font-size:0.8em;opacity:0.8;">Origination/Points: $' + costOrig.toFixed(2) + ', Title & Recording: $' + costTitle.toFixed(2) + ', Program Fee: $' + additionalFee.toFixed(2) + '.</span>';
+          // Highlight if new plan is better or worse based on monthly savings
+          if(savings > 0) {
+            costHtml += '<br><span style="color:#28a745;font-weight:bold;">New plan is better: saves $' + savings.toFixed(0) + '/mo.</span>';
+          } else if(savings < 0) {
+            costHtml += '<br><span style="color:#ff6666;font-weight:bold;">Payment increases by $' + Math.abs(savings).toFixed(0) + '/mo.</span>';
+          }
+          document.getElementById('costText').innerHTML = costHtml;
+          document.getElementById('aprLine').textContent = '';
+          costDetailsEl.style.display = 'block';
+        } else {
+          costDetailsEl.style.display = 'none';
+        }
+      }
       // High rate alert: show if current rate higher and monthly savings positive
       const rateAlertEl = document.getElementById('rateAlert');
       if(rateAlertEl) {
@@ -373,6 +435,17 @@
       if(loEmail) contactHtml += (contactHtml ? ' · ' : '') + '<a href="mailto:' + loEmail + '" style="color:#4faeff;">' + loEmail + '</a>';
       if(loReviews) contactHtml += (contactHtml ? ' · ' : '') + '<a href="' + loReviews + '" target="_blank" style="color:#4faeff;">Reviews</a>';
       document.getElementById('loContact').innerHTML = contactHtml;
+      // Show apply button if apply link provided
+      const applyContainer = document.getElementById('applyContainer');
+      if(applyContainer) {
+        if(applyLinkVal && applyLinkVal.trim() !== '') {
+          applyContainer.style.display = 'block';
+          applyContainer.innerHTML = '<a href="' + applyLinkVal + '" target="_blank" style="display:inline-block;background:#007bff;color:#fff;padding:8px 16px;border-radius:6px;text-decoration:none;">Start Application</a>';
+        } else {
+          applyContainer.style.display = 'none';
+          applyContainer.innerHTML = '';
+        }
+      }
       if(showChart) {
         document.getElementById('chartContainer').style.display = 'block';
         const currFV = futureBalance(currBal, currRate, currPI, 36);
@@ -401,7 +474,7 @@
       const baseUrl = window.location.origin + window.location.pathname;
       const params = new URLSearchParams();
       // List of fields to include in the query string
-      const ids = ['borrowerName','propertyAddress','currentBalance','currentRate','currentTerm','currentMonthlyOther','newLoanAmount','newRate','newTerm','newMonthlyOther','newMI','fundingFee','loanType','loName','loPhone','loEmail','loReviews'];
+      const ids = ['borrowerName','propertyAddress','currentBalance','currentRate','currentTerm','currentMonthlyOther','newLoanAmount','newRate','newTerm','newMonthlyOther','newMI','fundingFee','loanType','loName','loPhone','loEmail','loReviews','costOrig','costTitle','lenderCredit','applyLink'];
       ids.forEach(function(id) {
         const el = document.getElementById(id);
         if(el) {
