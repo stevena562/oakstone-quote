@@ -37,13 +37,15 @@
         function App() {
             const [view, setView] = useState('input');
             const [showApp, setShowApp] = useState(false);
-            const [expandedFees, setExpandedFees] = useState({});
             const [leadDatabase, setLeadDatabase] = useState([]);
             const [showColumnMapping, setShowColumnMapping] = useState(false);
             const [csvData, setCsvData] = useState(null);
             const [columnMap, setColumnMap] = useState({ name: '', email: '', phone: '', address: '', city: '', state: '', zip: '', balance: '' });
             const [searchQuery, setSearchQuery] = useState('');
             const [showSearchResults, setShowSearchResults] = useState(false);
+            const [linkCopied, setLinkCopied] = useState(false);
+            const [generatedLink, setGeneratedLink] = useState('');
+            const [isClientView, setIsClientView] = useState(false);
             
             const [borrowerInfo, setBorrowerInfo] = useState({
                 name: 'John Martinez', email: 'john.martinez@email.com', phone: '949-555-1234',
@@ -78,24 +80,67 @@
             });
 
             const [loanOptions, setLoanOptions] = useState([
-                { id: 1, name: 'Buy Down', rate: '5.875', points: 4000, lenderCredit: 0 },
-                { id: 2, name: 'No Points', rate: '6.250', points: 0, lenderCredit: 0 },
-                { id: 3, name: 'No Cost', rate: '6.625', points: 0, lenderCredit: 5500 }
+                { id: 1, name: 'Buy Down', rate: '5.875', term: 30, points: 4000, lenderCredit: 0 },
+                { id: 2, name: 'No Points', rate: '6.250', term: 30, points: 0, lenderCredit: 0 },
+                { id: 3, name: 'No Cost', rate: '6.625', term: 30, points: 0, lenderCredit: 5500 }
             ]);
 
             useEffect(() => {
-                try {
-                    const savedLeads = localStorage.getItem('oakstone_lead_database');
-                    if (savedLeads) setLeadDatabase(JSON.parse(savedLeads));
-                    const savedProfile = localStorage.getItem('oakstone_lo_profile');
-                    if (savedProfile) {
-                        const data = JSON.parse(savedProfile);
-                        if (data.loanOfficer) setLoanOfficer(data.loanOfficer);
-                        if (data.appSettings) setAppSettings(data.appSettings);
-                        if (data.customFees) setCustomFees(data.customFees);
+                const params = new URLSearchParams(window.location.search);
+                const data = params.get('d');
+                
+                if (data) {
+                    try {
+                        const decoded = JSON.parse(atob(data));
+                        if (decoded.borrower) setBorrowerInfo(decoded.borrower);
+                        if (decoded.lo) setLoanOfficer(decoded.lo);
+                        if (decoded.options) setLoanOptions(decoded.options);
+                        if (decoded.display) setDisplayOptions(decoded.display);
+                        if (decoded.fees) setCustomFees(decoded.fees);
+                        if (decoded.app) setAppSettings(decoded.app);
+                        setView('preview');
+                        setIsClientView(true);
+                    } catch (e) {
+                        console.error('Failed to parse URL data');
                     }
-                } catch (e) {}
+                } else {
+                    try {
+                        const savedLeads = localStorage.getItem('oakstone_lead_database');
+                        if (savedLeads) setLeadDatabase(JSON.parse(savedLeads));
+                        const savedProfile = localStorage.getItem('oakstone_lo_profile');
+                        if (savedProfile) {
+                            const data = JSON.parse(savedProfile);
+                            if (data.loanOfficer) setLoanOfficer(data.loanOfficer);
+                            if (data.appSettings) setAppSettings(data.appSettings);
+                            if (data.customFees) setCustomFees(data.customFees);
+                        }
+                    } catch (e) {}
+                }
             }, []);
+
+            const generateLink = () => {
+                const data = {
+                    borrower: borrowerInfo,
+                    lo: loanOfficer,
+                    options: loanOptions,
+                    display: displayOptions,
+                    fees: customFees,
+                    app: appSettings
+                };
+                const encoded = btoa(JSON.stringify(data));
+                const baseUrl = window.location.origin + window.location.pathname;
+                const link = `${baseUrl}?d=${encoded}`;
+                setGeneratedLink(link);
+                return link;
+            };
+
+            const copyLink = () => {
+                const link = generateLink();
+                navigator.clipboard.writeText(link).then(() => {
+                    setLinkCopied(true);
+                    setTimeout(() => setLinkCopied(false), 3000);
+                });
+            };
 
             const saveLOProfile = () => {
                 localStorage.setItem('oakstone_lo_profile', JSON.stringify({ loanOfficer, appSettings, customFees }));
@@ -164,14 +209,14 @@
                 }
             };
 
-            const calculatePI = (amt, rate) => {
+            const calculatePI = (amt, rate, termYears = 30) => {
                 if (!amt || !rate) return 0;
-                const P = parseFloat(amt), r = parseFloat(rate) / 100 / 12, n = 360;
+                const P = parseFloat(amt), r = parseFloat(rate) / 100 / 12, n = termYears * 12;
                 return P * (r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
             };
 
-            const calculatePayment = (amt, rate) => {
-                const pi = calculatePI(amt, rate);
+            const calculatePayment = (amt, rate, termYears = 30) => {
+                const pi = calculatePI(amt, rate, termYears);
                 const tax = parseFloat(borrowerInfo.monthlyTax) || 0;
                 const ins = parseFloat(borrowerInfo.monthlyInsurance) || 0;
                 const hoa = parseFloat(borrowerInfo.monthlyHOA) || 0;
@@ -211,18 +256,18 @@
                 return { sA, sB, sC, funding, totA, totB, totC, total };
             };
 
-            const calculateAPR = (amt, rate) => {
+            const calculateAPR = (amt, rate, termYears = 30) => {
                 if (!amt || !rate) return parseFloat(rate) || 0;
                 const costs = calculateCosts(amt, 0, 0);
                 const P = parseFloat(amt);
                 const r = parseFloat(rate) / 100 / 12;
-                const impact = (costs.total / P) / 30 / 12;
+                const impact = (costs.total / P) / termYears / 12;
                 return (r + impact) * 12 * 100;
             };
 
             const addOption = () => {
                 if (loanOptions.length < 3) {
-                    setLoanOptions([...loanOptions, { id: Date.now(), name: `Option ${loanOptions.length + 1}`, rate: '', points: 0, lenderCredit: 0 }]);
+                    setLoanOptions([...loanOptions, { id: Date.now(), name: `Option ${loanOptions.length + 1}`, rate: '', term: 30, points: 0, lenderCredit: 0 }]);
                 }
             };
 
@@ -242,32 +287,34 @@
 
             return (
                 <div className="min-h-screen bg-white">
-                    {/* HEADER - BOLD BLACK */}
-                    <div className="bg-black text-white px-8 py-6 border-b-4 border-gray-900 no-print">
-                        <div className="max-w-7xl mx-auto flex justify-between items-center">
-                            <div>
-                                <h1 className="text-3xl font-bold tracking-tight">{loanOfficer.companyName.toUpperCase()}</h1>
-                                <p className="text-gray-400 text-sm mt-1">Mortgage Lending | NMLS #{loanOfficer.companyNMLS}</p>
-                            </div>
-                            <div className="flex gap-3">
-                                <button onClick={() => setView('input')} className={`px-6 py-2 font-semibold transition-all ${view === 'input' ? 'bg-white text-black' : 'bg-gray-800 text-white hover:bg-gray-700'}`}>INPUT</button>
-                                <button onClick={() => setView('preview')} className={`px-6 py-2 font-semibold transition-all flex items-center gap-2 ${view === 'preview' ? 'bg-white text-black' : 'bg-gray-800 text-white hover:bg-gray-700'}`}>
-                                    <Icon name="Eye" size={18} /> PREVIEW
-                                </button>
+                    {/* HEADER */}
+                    {!isClientView && (
+                        <div className="bg-black text-white px-4 md:px-8 py-4 md:py-6 no-print">
+                            <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-4">
+                                <div className="text-center md:text-left">
+                                    <h1 className="text-xl md:text-3xl font-bold tracking-tight">{loanOfficer.companyName.toUpperCase()}</h1>
+                                    <p className="text-gray-400 text-xs md:text-sm mt-1">NMLS #{loanOfficer.companyNMLS}</p>
+                                </div>
+                                <div className="flex gap-2">
+                                    <button onClick={() => setView('input')} className={`px-4 md:px-6 py-2 text-sm md:text-base font-semibold ${view === 'input' ? 'bg-white text-black' : 'bg-gray-800 text-white'}`}>INPUT</button>
+                                    <button onClick={() => setView('preview')} className={`px-4 md:px-6 py-2 text-sm md:text-base font-semibold flex items-center gap-2 ${view === 'preview' ? 'bg-white text-black' : 'bg-gray-800 text-white'}`}>
+                                        <Icon name="Eye" size={16} /> PREVIEW
+                                    </button>
+                                </div>
                             </div>
                         </div>
-                    </div>
+                    )}
 
                     {/* APP MODAL */}
                     {showApp && (
-                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                            <div className="bg-white max-w-6xl w-full h-[90vh] flex flex-col">
-                                <div className="bg-black text-white p-6 flex justify-between items-center">
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 md:p-4">
+                            <div className="bg-white w-full max-w-6xl h-[95vh] md:h-[90vh] flex flex-col">
+                                <div className="bg-black text-white p-4 md:p-6 flex justify-between items-center">
                                     <div>
-                                        <h2 className="text-2xl font-bold">START YOUR APPLICATION</h2>
-                                        <p className="text-gray-300 text-sm">Soft pull only - No credit score impact</p>
+                                        <h2 className="text-lg md:text-2xl font-bold">START YOUR APPLICATION</h2>
+                                        <p className="text-gray-300 text-xs md:text-sm">Soft pull only - No credit score impact</p>
                                     </div>
-                                    <button onClick={() => setShowApp(false)} className="text-white hover:text-gray-300"><Icon name="X" size={24} /></button>
+                                    <button onClick={() => setShowApp(false)} className="text-white p-2"><Icon name="X" size={24} /></button>
                                 </div>
                                 <iframe src={appSettings.customAppUrl || appSettings.arriveUrl} className="flex-1 border-0" />
                             </div>
@@ -276,76 +323,93 @@
 
                     {/* CSV MODAL */}
                     {showColumnMapping && csvData && (
-                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                            <div className="bg-white max-w-4xl w-full">
-                                <div className="bg-purple-600 text-white p-6">
-                                    <h2 className="text-2xl font-bold">MAP YOUR CSV COLUMNS</h2>
-                                    <p className="text-sm mt-2">Found {csvData.data.length.toLocaleString()} rows</p>
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-2 md:p-4">
+                            <div className="bg-white w-full max-w-4xl max-h-[95vh] overflow-y-auto">
+                                <div className="bg-purple-600 text-white p-4 md:p-6">
+                                    <h2 className="text-xl md:text-2xl font-bold">MAP CSV COLUMNS</h2>
+                                    <p className="text-sm mt-2">{csvData.data.length.toLocaleString()} rows</p>
                                 </div>
-                                <div className="p-8 space-y-4">
-                                    <div className="grid grid-cols-2 gap-4">
+                                <div className="p-4 md:p-8 space-y-4">
+                                    <div className="grid grid-cols-2 gap-3 md:gap-4">
                                         {['name','email','phone','address','city','state','zip','balance'].map(f => (
                                             <div key={f}>
-                                                <label className="block text-sm font-semibold mb-2">{f.toUpperCase()}{f === 'name' ? ' (Required)' : ''}</label>
-                                                <select value={columnMap[f]} onChange={e => setColumnMap({...columnMap, [f]: e.target.value})} className="border-2 border-gray-300 px-4 py-3 w-full">
-                                                    <option value="">-- Select Column --</option>
+                                                <label className="block text-xs md:text-sm font-semibold mb-1 md:mb-2">{f.toUpperCase()}</label>
+                                                <select value={columnMap[f]} onChange={e => setColumnMap({...columnMap, [f]: e.target.value})} className="border-2 border-gray-300 px-3 py-2 w-full text-sm">
+                                                    <option value="">Select</option>
                                                     {csvData.headers.map(h => <option key={h} value={h}>{h}</option>)}
                                                 </select>
                                             </div>
                                         ))}
                                     </div>
-                                    <div className="flex gap-4 mt-8">
-                                        <button onClick={() => {setShowColumnMapping(false); setCsvData(null);}} className="flex-1 border-2 border-black px-6 py-4 font-bold hover:bg-gray-100">CANCEL</button>
-                                        <button onClick={saveLeadDatabase} className="flex-1 bg-purple-600 text-white px-6 py-4 font-bold hover:bg-purple-700">IMPORT LEADS</button>
+                                    <div className="flex gap-3 mt-6">
+                                        <button onClick={() => {setShowColumnMapping(false); setCsvData(null);}} className="flex-1 border-2 border-black px-4 py-3 font-bold">CANCEL</button>
+                                        <button onClick={saveLeadDatabase} className="flex-1 bg-purple-600 text-white px-4 py-3 font-bold">IMPORT</button>
                                     </div>
                                 </div>
                             </div>
                         </div>
                     )}
 
-                    <div className="max-w-7xl mx-auto p-8">
-                        {view === 'input' ? (
-                            <div className="space-y-8">
-                                {/* LO PROFILE - BOLD STYLE */}
-                                <div className="border-4 border-black p-6 bg-blue-50">
-                                    <div className="flex justify-between items-start mb-6">
-                                        <h2 className="text-2xl font-bold">YOUR LOAN OFFICER PROFILE</h2>
+                    <div className="max-w-7xl mx-auto p-4 md:p-8">
+                        {view === 'input' && !isClientView ? (
+                            <div className="space-y-6 md:space-y-8">
+                                {/* GENERATE LINK */}
+                                <div className="bg-green-50 border-4 border-green-600 p-4 md:p-6">
+                                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                                        <div>
+                                            <h2 className="text-xl md:text-2xl font-bold text-green-800">GENERATE LINK</h2>
+                                            <p className="text-green-700 text-sm">Create a unique link for this borrower</p>
+                                        </div>
+                                        <button onClick={copyLink} className="w-full md:w-auto bg-green-600 text-white px-6 py-3 font-bold flex items-center justify-center gap-2">
+                                            <Icon name={linkCopied ? "Check" : "Link"} size={20} />
+                                            {linkCopied ? 'COPIED!' : 'COPY LINK'}
+                                        </button>
+                                    </div>
+                                    {generatedLink && (
+                                        <div className="mt-4 p-3 bg-white border-2 border-green-400 text-xs break-all text-gray-600">
+                                            {generatedLink}
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* LO PROFILE */}
+                                <div className="border-4 border-black p-4 md:p-6 bg-blue-50">
+                                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4 md:mb-6">
+                                        <h2 className="text-xl md:text-2xl font-bold">LOAN OFFICER PROFILE</h2>
                                         <div className="flex gap-2">
-                                            <button onClick={saveLOProfile} className="bg-black text-white px-4 py-2 font-semibold flex items-center gap-2 hover:bg-gray-800"><Icon name="Save" size={18} /> SAVE</button>
-                                            <button onClick={loadLOProfile} className="bg-gray-700 text-white px-4 py-2 font-semibold hover:bg-gray-600">LOAD</button>
+                                            <button onClick={saveLOProfile} className="bg-black text-white px-3 py-2 text-sm font-semibold flex items-center gap-1"><Icon name="Save" size={16} /> SAVE</button>
+                                            <button onClick={loadLOProfile} className="bg-gray-700 text-white px-3 py-2 text-sm font-semibold">LOAD</button>
                                         </div>
                                     </div>
-                                    <div className="grid grid-cols-3 gap-4">
-                                        <input placeholder="Your Name" value={loanOfficer.name} onChange={e => setLoanOfficer({...loanOfficer, name: e.target.value})} className="border-2 border-gray-300 px-4 py-3 focus:border-black outline-none" />
-                                        <input placeholder="NMLS ID" value={loanOfficer.nmls} onChange={e => setLoanOfficer({...loanOfficer, nmls: e.target.value})} className="border-2 border-gray-300 px-4 py-3 focus:border-black outline-none" />
-                                        <input placeholder="Phone" value={loanOfficer.phone} onChange={e => setLoanOfficer({...loanOfficer, phone: e.target.value})} className="border-2 border-gray-300 px-4 py-3 focus:border-black outline-none" />
-                                        <input placeholder="Email" value={loanOfficer.email} onChange={e => setLoanOfficer({...loanOfficer, email: e.target.value})} className="border-2 border-gray-300 px-4 py-3 focus:border-black outline-none col-span-2" />
-                                        <input placeholder="Company Name" value={loanOfficer.companyName} onChange={e => setLoanOfficer({...loanOfficer, companyName: e.target.value})} className="border-2 border-gray-300 px-4 py-3 focus:border-black outline-none" />
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                                        <input placeholder="Your Name" value={loanOfficer.name} onChange={e => setLoanOfficer({...loanOfficer, name: e.target.value})} className="border-2 border-gray-300 px-3 py-2 focus:border-black outline-none" />
+                                        <input placeholder="NMLS ID" value={loanOfficer.nmls} onChange={e => setLoanOfficer({...loanOfficer, nmls: e.target.value})} className="border-2 border-gray-300 px-3 py-2 focus:border-black outline-none" />
+                                        <input placeholder="Phone" value={loanOfficer.phone} onChange={e => setLoanOfficer({...loanOfficer, phone: e.target.value})} className="border-2 border-gray-300 px-3 py-2 focus:border-black outline-none" />
+                                        <input placeholder="Email" value={loanOfficer.email} onChange={e => setLoanOfficer({...loanOfficer, email: e.target.value})} className="border-2 border-gray-300 px-3 py-2 focus:border-black outline-none md:col-span-2" />
+                                        <input placeholder="Company Name" value={loanOfficer.companyName} onChange={e => setLoanOfficer({...loanOfficer, companyName: e.target.value})} className="border-2 border-gray-300 px-3 py-2 focus:border-black outline-none" />
                                     </div>
                                 </div>
 
                                 {/* DISPLAY OPTIONS */}
-                                <div className="border-2 border-black p-6 bg-yellow-50">
-                                    <h2 className="text-2xl font-bold mb-6">WHAT TO SHOW CLIENTS</h2>
-                                    <div className="grid grid-cols-4 gap-4">
+                                <div className="border-2 border-black p-4 md:p-6 bg-yellow-50">
+                                    <h2 className="text-xl md:text-2xl font-bold mb-4 md:mb-6">DISPLAY OPTIONS</h2>
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                                         {[
-                                            ['showFullBreakdown', 'Full Fee Breakdown', 'Expandable costs'],
-                                            ['showMonthlySavings', 'Monthly Savings', 'vs current payment'],
-                                            ['showSkipPayments', 'Skip Payments', 'Highlight benefit'],
-                                            ['showEscrowRefund', 'Escrow Refund', 'From current lender'],
-                                            ['showCurrentVsNew', 'Rate Comparison', 'Current vs New'],
-                                            ['showLifetimeCost', 'Lifetime Cost', '30-year total']
-                                        ].map(([k, label, sub]) => (
-                                            <label key={k} className="flex items-center gap-3 p-4 bg-white border-2 border-gray-300 cursor-pointer hover:border-black">
+                                            ['showMonthlySavings', 'Monthly Savings'],
+                                            ['showSkipPayments', 'Skip Payments'],
+                                            ['showEscrowRefund', 'Escrow Refund'],
+                                            ['showCurrentVsNew', 'Rate Comparison'],
+                                        ].map(([k, label]) => (
+                                            <label key={k} className="flex items-center gap-2 p-3 bg-white border-2 border-gray-300 cursor-pointer">
                                                 <input type="checkbox" checked={displayOptions[k]} onChange={e => setDisplayOptions({...displayOptions, [k]: e.target.checked})} className="w-5 h-5" />
-                                                <div><p className="font-bold">{label}</p><p className="text-sm text-gray-600">{sub}</p></div>
+                                                <span className="font-semibold text-sm">{label}</span>
                                             </label>
                                         ))}
                                     </div>
                                     {displayOptions.showSkipPayments && (
-                                        <div className="mt-4 flex items-center gap-4">
-                                            <label className="font-semibold">Skip Payments Count:</label>
-                                            <select value={displayOptions.paymentsToSkip} onChange={e => setDisplayOptions({...displayOptions, paymentsToSkip: parseInt(e.target.value)})} className="border-2 border-gray-300 px-4 py-2">
+                                        <div className="mt-4 flex items-center gap-3">
+                                            <label className="font-semibold text-sm">Skip:</label>
+                                            <select value={displayOptions.paymentsToSkip} onChange={e => setDisplayOptions({...displayOptions, paymentsToSkip: parseInt(e.target.value)})} className="border-2 border-gray-300 px-3 py-2">
                                                 <option value={1}>1 Payment</option>
                                                 <option value={2}>2 Payments</option>
                                                 <option value={3}>3 Payments</option>
@@ -355,32 +419,32 @@
                                 </div>
 
                                 {/* BORROWER */}
-                                <div className="border-2 border-black p-6">
-                                    <div className="flex justify-between items-center mb-6">
-                                        <h2 className="text-2xl font-bold">BORROWER INFORMATION</h2>
+                                <div className="border-2 border-black p-4 md:p-6">
+                                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-4 md:mb-6">
+                                        <h2 className="text-xl md:text-2xl font-bold">BORROWER</h2>
                                         <div className="flex gap-2">
-                                            <label className="bg-purple-600 text-white px-4 py-2 font-semibold cursor-pointer hover:bg-purple-700 flex items-center gap-2">
-                                                <Icon name="Download" size={18} />
-                                                {leadDatabase.length > 0 ? `${leadDatabase.length.toLocaleString()} LEADS LOADED` : 'UPLOAD LEAD DATABASE'}
+                                            <label className="bg-purple-600 text-white px-3 py-2 text-sm font-semibold cursor-pointer flex items-center gap-1">
+                                                <Icon name="Upload" size={16} />
+                                                {leadDatabase.length > 0 ? `${leadDatabase.length} LEADS` : 'CSV'}
                                                 <input type="file" accept=".csv" onChange={handleCSVUpload} className="hidden" />
                                             </label>
                                             {leadDatabase.length > 0 && (
-                                                <button onClick={clearLeadDatabase} className="bg-red-600 text-white px-4 py-2 font-semibold hover:bg-red-700">CLEAR</button>
+                                                <button onClick={clearLeadDatabase} className="bg-red-600 text-white px-3 py-2 text-sm font-semibold">CLEAR</button>
                                             )}
                                         </div>
                                     </div>
 
                                     {leadDatabase.length > 0 && (
                                         <div className="mb-4 relative">
-                                            <input placeholder="Search leads by name, email, or phone..." value={searchQuery}
+                                            <input placeholder="Search leads..." value={searchQuery}
                                                 onChange={e => { setSearchQuery(e.target.value); setShowSearchResults(e.target.value.length >= 2); }}
-                                                className="border-2 border-purple-500 px-4 py-3 focus:border-purple-700 outline-none w-full text-lg" />
+                                                className="border-2 border-purple-500 px-3 py-2 w-full" />
                                             {showSearchResults && searchQuery.length >= 2 && (
-                                                <div className="absolute z-10 w-full bg-white border-4 border-purple-600 mt-1 max-h-96 overflow-y-auto">
+                                                <div className="absolute z-10 w-full bg-white border-4 border-purple-600 mt-1 max-h-60 overflow-y-auto">
                                                     {searchLeads(searchQuery).map((l, i) => (
-                                                        <div key={i} onClick={() => selectLead(l)} className="p-4 hover:bg-purple-100 cursor-pointer border-b-2 border-purple-200">
-                                                            <p className="font-bold text-lg">{l.name}</p>
-                                                            <p className="text-sm text-gray-600">{l.email} | {l.phone}</p>
+                                                        <div key={i} onClick={() => selectLead(l)} className="p-3 hover:bg-purple-100 cursor-pointer border-b">
+                                                            <p className="font-bold">{l.name}</p>
+                                                            <p className="text-xs text-gray-600">{l.email}</p>
                                                         </div>
                                                     ))}
                                                 </div>
@@ -388,266 +452,278 @@
                                         </div>
                                     )}
 
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <input placeholder="Borrower Name" value={borrowerInfo.name} onChange={e => setBorrowerInfo({...borrowerInfo, name: e.target.value})} className="border-2 border-gray-300 px-4 py-3 focus:border-black outline-none" />
-                                        <input placeholder="Email" value={borrowerInfo.email} onChange={e => setBorrowerInfo({...borrowerInfo, email: e.target.value})} className="border-2 border-gray-300 px-4 py-3 focus:border-black outline-none" />
-                                        <input placeholder="Phone" value={borrowerInfo.phone} onChange={e => setBorrowerInfo({...borrowerInfo, phone: e.target.value})} className="border-2 border-gray-300 px-4 py-3 focus:border-black outline-none col-span-2" />
-                                        <input placeholder="Property Address" value={borrowerInfo.address} onChange={e => setBorrowerInfo({...borrowerInfo, address: e.target.value})} className="border-2 border-gray-300 px-4 py-3 focus:border-black outline-none col-span-2" />
-                                        <input placeholder="City" value={borrowerInfo.city} onChange={e => setBorrowerInfo({...borrowerInfo, city: e.target.value})} className="border-2 border-gray-300 px-4 py-3 focus:border-black outline-none" />
-                                        <div className="flex gap-4">
-                                            <input placeholder="State" value={borrowerInfo.state} onChange={e => setBorrowerInfo({...borrowerInfo, state: e.target.value})} className="border-2 border-gray-300 px-4 py-3 focus:border-black outline-none flex-1" />
-                                            <input placeholder="ZIP" value={borrowerInfo.zip} onChange={e => setBorrowerInfo({...borrowerInfo, zip: e.target.value})} className="border-2 border-gray-300 px-4 py-3 focus:border-black outline-none flex-1" />
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                        <input placeholder="Name" value={borrowerInfo.name} onChange={e => setBorrowerInfo({...borrowerInfo, name: e.target.value})} className="border-2 border-gray-300 px-3 py-2" />
+                                        <input placeholder="Email" value={borrowerInfo.email} onChange={e => setBorrowerInfo({...borrowerInfo, email: e.target.value})} className="border-2 border-gray-300 px-3 py-2" />
+                                        <input placeholder="Phone" value={borrowerInfo.phone} onChange={e => setBorrowerInfo({...borrowerInfo, phone: e.target.value})} className="border-2 border-gray-300 px-3 py-2 md:col-span-2" />
+                                        <input placeholder="Address" value={borrowerInfo.address} onChange={e => setBorrowerInfo({...borrowerInfo, address: e.target.value})} className="border-2 border-gray-300 px-3 py-2 md:col-span-2" />
+                                        <input placeholder="City" value={borrowerInfo.city} onChange={e => setBorrowerInfo({...borrowerInfo, city: e.target.value})} className="border-2 border-gray-300 px-3 py-2" />
+                                        <div className="flex gap-2">
+                                            <input placeholder="State" value={borrowerInfo.state} onChange={e => setBorrowerInfo({...borrowerInfo, state: e.target.value})} className="border-2 border-gray-300 px-3 py-2 flex-1" />
+                                            <input placeholder="ZIP" value={borrowerInfo.zip} onChange={e => setBorrowerInfo({...borrowerInfo, zip: e.target.value})} className="border-2 border-gray-300 px-3 py-2 flex-1" />
                                         </div>
                                     </div>
                                 </div>
 
                                 {/* LOAN DETAILS */}
-                                <div className="border-2 border-black p-6">
-                                    <h2 className="text-2xl font-bold mb-6">LOAN DETAILS</h2>
-                                    <div className="grid grid-cols-4 gap-4 mb-4">
+                                <div className="border-2 border-black p-4 md:p-6">
+                                    <h2 className="text-xl md:text-2xl font-bold mb-4 md:mb-6">LOAN DETAILS</h2>
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
                                         <div>
-                                            <label className="block text-sm font-semibold mb-2">LOAN PURPOSE</label>
-                                            <select value={borrowerInfo.loanPurpose} onChange={e => setBorrowerInfo({...borrowerInfo, loanPurpose: e.target.value})} className="border-2 border-gray-300 px-4 py-3 focus:border-black outline-none w-full">
+                                            <label className="block text-xs font-semibold mb-1">PURPOSE</label>
+                                            <select value={borrowerInfo.loanPurpose} onChange={e => setBorrowerInfo({...borrowerInfo, loanPurpose: e.target.value})} className="border-2 border-gray-300 px-3 py-2 w-full text-sm">
                                                 <option>Purchase</option><option>Refinance</option><option>Cash-Out Refi</option>
                                             </select>
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-semibold mb-2">LOAN PROGRAM</label>
-                                            <select value={borrowerInfo.program} onChange={e => setBorrowerInfo({...borrowerInfo, program: e.target.value})} className="border-2 border-gray-300 px-4 py-3 focus:border-black outline-none w-full">
+                                            <label className="block text-xs font-semibold mb-1">PROGRAM</label>
+                                            <select value={borrowerInfo.program} onChange={e => setBorrowerInfo({...borrowerInfo, program: e.target.value})} className="border-2 border-gray-300 px-3 py-2 w-full text-sm">
                                                 <option>Conventional</option><option>FHA</option><option>VA</option><option>VA IRRRL</option><option>USDA</option><option>Jumbo</option>
                                             </select>
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-semibold mb-2">LOAN AMOUNT</label>
-                                            <input type="number" value={borrowerInfo.loanAmount} onChange={e => setBorrowerInfo({...borrowerInfo, loanAmount: e.target.value})} className="border-2 border-gray-300 px-4 py-3 focus:border-black outline-none w-full" />
+                                            <label className="block text-xs font-semibold mb-1">LOAN AMT</label>
+                                            <input type="number" value={borrowerInfo.loanAmount} onChange={e => setBorrowerInfo({...borrowerInfo, loanAmount: e.target.value})} className="border-2 border-gray-300 px-3 py-2 w-full" />
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-semibold mb-2">PROPERTY VALUE</label>
-                                            <input type="number" value={borrowerInfo.propertyValue} onChange={e => setBorrowerInfo({...borrowerInfo, propertyValue: e.target.value})} className="border-2 border-gray-300 px-4 py-3 focus:border-black outline-none w-full" />
+                                            <label className="block text-xs font-semibold mb-1">VALUE</label>
+                                            <input type="number" value={borrowerInfo.propertyValue} onChange={e => setBorrowerInfo({...borrowerInfo, propertyValue: e.target.value})} className="border-2 border-gray-300 px-3 py-2 w-full" />
                                         </div>
                                     </div>
-                                    <div className="grid grid-cols-4 gap-4 mb-4">
-                                        <div><label className="block text-sm font-semibold mb-2">MONTHLY TAX</label><input type="number" value={borrowerInfo.monthlyTax} onChange={e => setBorrowerInfo({...borrowerInfo, monthlyTax: e.target.value})} className="border-2 border-gray-300 px-4 py-3 focus:border-black outline-none w-full" /></div>
-                                        <div><label className="block text-sm font-semibold mb-2">MONTHLY INSURANCE</label><input type="number" value={borrowerInfo.monthlyInsurance} onChange={e => setBorrowerInfo({...borrowerInfo, monthlyInsurance: e.target.value})} className="border-2 border-gray-300 px-4 py-3 focus:border-black outline-none w-full" /></div>
-                                        <div><label className="block text-sm font-semibold mb-2">MONTHLY HOA</label><input type="number" value={borrowerInfo.monthlyHOA} onChange={e => setBorrowerInfo({...borrowerInfo, monthlyHOA: e.target.value})} className="border-2 border-gray-300 px-4 py-3 focus:border-black outline-none w-full" /></div>
-                                        {isRefi && <div><label className="block text-sm font-semibold mb-2">CURRENT PAYMENT</label><input type="number" value={borrowerInfo.currentMonthlyPayment} onChange={e => setBorrowerInfo({...borrowerInfo, currentMonthlyPayment: e.target.value})} className="border-2 border-gray-300 px-4 py-3 focus:border-black outline-none w-full" /></div>}
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+                                        <div><label className="block text-xs font-semibold mb-1">TAX/MO</label><input type="number" value={borrowerInfo.monthlyTax} onChange={e => setBorrowerInfo({...borrowerInfo, monthlyTax: e.target.value})} className="border-2 border-gray-300 px-3 py-2 w-full" /></div>
+                                        <div><label className="block text-xs font-semibold mb-1">INS/MO</label><input type="number" value={borrowerInfo.monthlyInsurance} onChange={e => setBorrowerInfo({...borrowerInfo, monthlyInsurance: e.target.value})} className="border-2 border-gray-300 px-3 py-2 w-full" /></div>
+                                        <div><label className="block text-xs font-semibold mb-1">HOA</label><input type="number" value={borrowerInfo.monthlyHOA} onChange={e => setBorrowerInfo({...borrowerInfo, monthlyHOA: e.target.value})} className="border-2 border-gray-300 px-3 py-2 w-full" /></div>
+                                        {isRefi && <div><label className="block text-xs font-semibold mb-1">CURRENT PMT</label><input type="number" value={borrowerInfo.currentMonthlyPayment} onChange={e => setBorrowerInfo({...borrowerInfo, currentMonthlyPayment: e.target.value})} className="border-2 border-gray-300 px-3 py-2 w-full" /></div>}
                                     </div>
                                     {isRefi && (
-                                        <div className="grid grid-cols-2 gap-4 mb-4">
-                                            <div><label className="block text-sm font-semibold mb-2">CURRENT INTEREST RATE (%)</label><input type="number" step="0.001" value={borrowerInfo.currentRate} onChange={e => setBorrowerInfo({...borrowerInfo, currentRate: e.target.value})} className="border-2 border-gray-300 px-4 py-3 focus:border-black outline-none w-full" /></div>
-                                            <div><label className="block text-sm font-semibold mb-2">ESTIMATED ESCROW BALANCE ($)</label><input type="number" value={borrowerInfo.estimatedEscrow} onChange={e => setBorrowerInfo({...borrowerInfo, estimatedEscrow: e.target.value})} className="border-2 border-gray-300 px-4 py-3 focus:border-black outline-none w-full" /><p className="text-xs text-gray-600 mt-1">This gets refunded by your current lender</p></div>
+                                        <div className="grid grid-cols-2 gap-3 mb-3">
+                                            <div><label className="block text-xs font-semibold mb-1">CURRENT RATE %</label><input type="number" step="0.001" value={borrowerInfo.currentRate} onChange={e => setBorrowerInfo({...borrowerInfo, currentRate: e.target.value})} className="border-2 border-gray-300 px-3 py-2 w-full" /></div>
+                                            <div><label className="block text-xs font-semibold mb-1">ESCROW BAL</label><input type="number" value={borrowerInfo.estimatedEscrow} onChange={e => setBorrowerInfo({...borrowerInfo, estimatedEscrow: e.target.value})} className="border-2 border-gray-300 px-3 py-2 w-full" /></div>
                                         </div>
                                     )}
                                     {isVA && (
-                                        <div className="flex gap-6 mt-4">
-                                            <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={borrowerInfo.vaFundingFeeExempt} onChange={e => setBorrowerInfo({...borrowerInfo, vaFundingFeeExempt: e.target.checked})} className="w-5 h-5" /><span className="font-semibold">VA Funding Fee Exempt (Disability)</span></label>
-                                            <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={borrowerInfo.rollCostsIntoLoan} onChange={e => setBorrowerInfo({...borrowerInfo, rollCostsIntoLoan: e.target.checked})} className="w-5 h-5" /><span className="font-semibold">Roll Costs Into Loan</span></label>
+                                        <div className="flex flex-wrap gap-4 mt-3">
+                                            <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={borrowerInfo.vaFundingFeeExempt} onChange={e => setBorrowerInfo({...borrowerInfo, vaFundingFeeExempt: e.target.checked})} className="w-4 h-4" /> VA Fee Exempt</label>
+                                            <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={borrowerInfo.rollCostsIntoLoan} onChange={e => setBorrowerInfo({...borrowerInfo, rollCostsIntoLoan: e.target.checked})} className="w-4 h-4" /> Roll Costs In</label>
                                         </div>
                                     )}
                                 </div>
 
-                                {/* LOAN OPTIONS */}
-                                <div className="border-2 border-black p-6">
-                                    <div className="flex justify-between items-center mb-6">
-                                        <h2 className="text-2xl font-bold">LOAN OPTIONS (30-YEAR FIXED)</h2>
-                                        {loanOptions.length < 3 && <button onClick={addOption} className="bg-black text-white px-4 py-2 font-semibold flex items-center gap-2 hover:bg-gray-800"><Icon name="Plus" size={18} /> ADD OPTION</button>}
+                                {/* RATE OPTIONS */}
+                                <div className="border-2 border-black p-4 md:p-6">
+                                    <div className="flex justify-between items-center mb-4 md:mb-6">
+                                        <h2 className="text-xl md:text-2xl font-bold">RATE OPTIONS</h2>
+                                        {loanOptions.length < 3 && <button onClick={addOption} className="bg-black text-white px-3 py-2 text-sm font-semibold flex items-center gap-1"><Icon name="Plus" size={16} /> ADD</button>}
                                     </div>
                                     <div className="space-y-4">
                                         {loanOptions.map(opt => (
-                                            <div key={opt.id} className="border-2 border-gray-300 p-4">
-                                                <div className="flex justify-between items-start mb-4">
-                                                    <input value={opt.name} onChange={e => updateOption(opt.id, 'name', e.target.value)} className="text-lg font-bold border-b-2 border-transparent hover:border-gray-300 focus:border-black outline-none" />
-                                                    {loanOptions.length > 1 && <button onClick={() => removeOption(opt.id)} className="text-red-600 hover:text-red-800"><Icon name="Trash2" size={20} /></button>}
+                                            <div key={opt.id} className="border-2 border-gray-300 p-3 md:p-4">
+                                                <div className="flex justify-between items-start mb-3">
+                                                    <input value={opt.name} onChange={e => updateOption(opt.id, 'name', e.target.value)} className="text-lg font-bold border-b-2 border-transparent focus:border-black outline-none" />
+                                                    {loanOptions.length > 1 && <button onClick={() => removeOption(opt.id)} className="text-red-600 p-1"><Icon name="Trash2" size={18} /></button>}
                                                 </div>
-                                                <div className="grid grid-cols-3 gap-4">
-                                                    <div><label className="block text-sm font-semibold mb-2">RATE (%)</label><input type="number" step="0.001" value={opt.rate} onChange={e => updateOption(opt.id, 'rate', e.target.value)} className="border-2 border-gray-300 px-4 py-3 focus:border-black outline-none w-full" /></div>
-                                                    <div><label className="block text-sm font-semibold mb-2">POINTS ($)</label><input type="number" value={opt.points} onChange={e => updateOption(opt.id, 'points', parseFloat(e.target.value) || 0)} className="border-2 border-gray-300 px-4 py-3 focus:border-black outline-none w-full" /></div>
-                                                    <div><label className="block text-sm font-semibold mb-2">LENDER CREDIT ($)</label><input type="number" value={opt.lenderCredit} onChange={e => updateOption(opt.id, 'lenderCredit', parseFloat(e.target.value) || 0)} className="border-2 border-gray-300 px-4 py-3 focus:border-black outline-none w-full" /></div>
+                                                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                                    <div><label className="block text-xs font-semibold mb-1">RATE %</label><input type="number" step="0.001" value={opt.rate} onChange={e => updateOption(opt.id, 'rate', e.target.value)} className="border-2 border-gray-300 px-3 py-2 w-full" /></div>
+                                                    <div>
+                                                        <label className="block text-xs font-semibold mb-1">TERM</label>
+                                                        <select value={opt.term} onChange={e => updateOption(opt.id, 'term', parseInt(e.target.value))} className="border-2 border-gray-300 px-3 py-2 w-full">
+                                                            <option value={10}>10 Year</option>
+                                                            <option value={15}>15 Year</option>
+                                                            <option value={20}>20 Year</option>
+                                                            <option value={30}>30 Year</option>
+                                                        </select>
+                                                    </div>
+                                                    <div><label className="block text-xs font-semibold mb-1">POINTS $</label><input type="number" value={opt.points} onChange={e => updateOption(opt.id, 'points', parseFloat(e.target.value) || 0)} className="border-2 border-gray-300 px-3 py-2 w-full" /></div>
+                                                    <div><label className="block text-xs font-semibold mb-1">CREDIT $</label><input type="number" value={opt.lenderCredit} onChange={e => updateOption(opt.id, 'lenderCredit', parseFloat(e.target.value) || 0)} className="border-2 border-gray-300 px-3 py-2 w-full" /></div>
                                                 </div>
                                             </div>
                                         ))}
                                     </div>
                                 </div>
+
+                                {/* BOTTOM CTA */}
+                                <div className="bg-green-600 text-white p-4 md:p-6 text-center">
+                                    <h3 className="text-lg md:text-xl font-bold mb-2">READY TO SEND?</h3>
+                                    <p className="mb-4 text-sm">Generate a unique link for {borrowerInfo.name.split(' ')[0]}</p>
+                                    <button onClick={copyLink} className="w-full md:w-auto bg-white text-green-600 px-8 py-3 font-bold text-lg">
+                                        {linkCopied ? '✓ COPIED!' : 'COPY LINK'}
+                                    </button>
+                                </div>
                             </div>
                         ) : (
-                            /* ==================== PREVIEW - BOLD STYLE ==================== */
-                            <div className="space-y-8">
-                                <div className="flex justify-end gap-4 no-print">
-                                    <button onClick={() => window.print()} className="bg-gray-800 text-white px-6 py-3 font-semibold flex items-center gap-2 hover:bg-gray-700"><Icon name="Download" size={18} /> PRINT / SAVE PDF</button>
-                                </div>
+                            /* ==================== CLIENT VIEW ==================== */
+                            <div className="space-y-6 md:space-y-8">
+                                {!isClientView && (
+                                    <div className="flex flex-col md:flex-row justify-between gap-3 no-print">
+                                        <button onClick={copyLink} className={`px-4 py-3 font-semibold flex items-center justify-center gap-2 ${linkCopied ? 'bg-green-600 text-white' : 'bg-green-100 text-green-800 border-2 border-green-600'}`}>
+                                            <Icon name={linkCopied ? "Check" : "Link"} size={18} /> {linkCopied ? 'COPIED!' : 'COPY LINK'}
+                                        </button>
+                                        <button onClick={() => window.print()} className="bg-gray-800 text-white px-4 py-3 font-semibold flex items-center justify-center gap-2"><Icon name="Download" size={18} /> PDF</button>
+                                    </div>
+                                )}
 
-                                <div className="border-4 border-black p-12 bg-white">
+                                <div className="border-4 border-black p-4 md:p-12 bg-white">
                                     {/* HEADER */}
-                                    <div className="text-center mb-12">
-                                        <h1 className="text-5xl font-bold mb-2">{loanOfficer.companyName.toUpperCase()}</h1>
-                                        <p className="text-gray-600">NMLS #{loanOfficer.companyNMLS}</p>
+                                    <div className="text-center mb-8 md:mb-12">
+                                        <h1 className="text-2xl md:text-5xl font-bold mb-2">{loanOfficer.companyName.toUpperCase()}</h1>
+                                        <p className="text-gray-600 text-sm">NMLS #{loanOfficer.companyNMLS}</p>
                                     </div>
 
                                     {/* LO CARD */}
-                                    <div className="bg-black text-white p-6 mb-8">
-                                        <div className="flex items-center gap-4">
-                                            <div className="w-16 h-16 bg-white text-black rounded-full flex items-center justify-center text-2xl font-bold">
+                                    <div className="bg-black text-white p-4 md:p-6 mb-6 md:mb-8">
+                                        <div className="flex items-center gap-3 md:gap-4">
+                                            <div className="w-12 h-12 md:w-16 md:h-16 bg-white text-black rounded-full flex items-center justify-center text-xl md:text-2xl font-bold">
                                                 {loanOfficer.name.split(' ').map(n => n[0]).join('').toUpperCase()}
                                             </div>
                                             <div>
-                                                <h3 className="text-xl font-bold">{loanOfficer.name}</h3>
-                                                <p className="text-gray-300">Senior Loan Officer</p>
-                                                <p className="text-sm text-gray-400">NMLS {loanOfficer.nmls}</p>
+                                                <h3 className="text-lg md:text-xl font-bold">{loanOfficer.name}</h3>
+                                                <p className="text-gray-300 text-sm">Senior Loan Officer</p>
+                                                <p className="text-xs md:text-sm text-gray-400">NMLS {loanOfficer.nmls}</p>
                                             </div>
                                         </div>
                                     </div>
 
                                     {/* BORROWER */}
-                                    <div className="mb-8">
-                                        <h2 className="text-3xl font-bold mb-4">Hi {borrowerInfo.name.split(' ')[0]}!</h2>
-                                        <p className="text-gray-700 text-lg">Here are your personalized {borrowerInfo.program} loan options for {borrowerInfo.address}, {borrowerInfo.city}, {borrowerInfo.state} {borrowerInfo.zip}.</p>
+                                    <div className="mb-6 md:mb-8">
+                                        <h2 className="text-2xl md:text-3xl font-bold mb-2 md:mb-4">Hi {borrowerInfo.name.split(' ')[0]}!</h2>
+                                        <p className="text-gray-700 text-sm md:text-lg">Here are your personalized {borrowerInfo.program} loan options for {borrowerInfo.address}, {borrowerInfo.city}, {borrowerInfo.state} {borrowerInfo.zip}.</p>
                                     </div>
 
-                                    {/* VA IRRRL BANNER - BOLD STYLE */}
+                                    {/* VA IRRRL BANNER */}
                                     {isIRRRL && (
-                                        <div className="bg-black text-white p-6 mb-8">
-                                            <h3 className="text-2xl font-bold mb-4">VA IRRRL REFINANCE</h3>
-                                            <div className="grid grid-cols-3 gap-6 text-center">
+                                        <div className="bg-black text-white p-4 md:p-6 mb-6 md:mb-8">
+                                            <h3 className="text-xl md:text-2xl font-bold mb-4">VA IRRRL REFINANCE</h3>
+                                            <div className="grid grid-cols-3 gap-2 md:gap-6 text-center">
                                                 <div>
-                                                    <div className="text-3xl font-bold mb-2">✓</div>
-                                                    <div className="font-semibold">NO INCOME</div>
-                                                    <div className="text-sm text-gray-300">Verification Required</div>
+                                                    <div className="text-2xl md:text-3xl font-bold mb-1 md:mb-2">✓</div>
+                                                    <div className="font-semibold text-xs md:text-base">NO INCOME</div>
+                                                    <div className="text-xs text-gray-300 hidden md:block">Verification Required</div>
                                                 </div>
                                                 <div>
-                                                    <div className="text-3xl font-bold mb-2">✓</div>
-                                                    <div className="font-semibold">NO APPRAISAL</div>
-                                                    <div className="text-sm text-gray-300">Needed</div>
+                                                    <div className="text-2xl md:text-3xl font-bold mb-1 md:mb-2">✓</div>
+                                                    <div className="font-semibold text-xs md:text-base">NO APPRAISAL</div>
+                                                    <div className="text-xs text-gray-300 hidden md:block">Needed</div>
                                                 </div>
                                                 <div>
-                                                    <div className="text-3xl font-bold mb-2">⚡</div>
-                                                    <div className="font-semibold">CLOSE IN 7-10 DAYS</div>
-                                                    <div className="text-sm text-gray-300">Fast Processing</div>
+                                                    <div className="text-2xl md:text-3xl font-bold mb-1 md:mb-2">⚡</div>
+                                                    <div className="font-semibold text-xs md:text-base">7-10 DAYS</div>
+                                                    <div className="text-xs text-gray-300 hidden md:block">Fast Close</div>
                                                 </div>
                                             </div>
                                         </div>
                                     )}
 
-                                    {/* SKIP PAYMENTS - GREEN BOX */}
+                                    {/* SKIP PAYMENTS */}
                                     {displayOptions.showSkipPayments && isRefi && skipValue > 0 && (
-                                        <div className="bg-green-50 border-4 border-green-600 p-6 mb-6">
+                                        <div className="bg-green-50 border-4 border-green-600 p-4 md:p-6 mb-4 md:mb-6">
                                             <div className="text-center">
-                                                <div className="text-5xl font-bold text-green-600 mb-2">${fmt(skipValue)}</div>
-                                                <h3 className="text-2xl font-bold mb-2">SKIP {displayOptions.paymentsToSkip} MORTGAGE PAYMENTS</h3>
-                                                <p className="text-gray-700">Keep this money in your pocket during the refinance process. Your first payment isn't due for approximately {displayOptions.paymentsToSkip + 1} months after closing.</p>
+                                                <div className="text-3xl md:text-5xl font-bold text-green-600 mb-2">${fmt(skipValue)}</div>
+                                                <h3 className="text-lg md:text-2xl font-bold mb-2">SKIP {displayOptions.paymentsToSkip} PAYMENTS</h3>
+                                                <p className="text-gray-700 text-sm md:text-base">Keep this money in your pocket during the refinance.</p>
                                             </div>
                                         </div>
                                     )}
 
-                                    {/* ESCROW REFUND - PURPLE BOX */}
+                                    {/* ESCROW REFUND */}
                                     {displayOptions.showEscrowRefund && isRefi && escrowRefund > 0 && (
-                                        <div className="bg-purple-50 border-4 border-purple-600 p-6 mb-6">
-                                            <div className="flex justify-between items-center">
-                                                <div>
-                                                    <p className="text-sm font-semibold text-purple-800 mb-1">ESCROW REFUND FROM CURRENT LENDER*</p>
-                                                    <p className="text-4xl font-bold text-purple-600">${fmt(escrowRefund)}</p>
-                                                </div>
-                                            </div>
-                                            <p className="text-xs text-purple-700 mt-3">*Estimated refund from your current lender's escrow account after payoff. Actual amount may vary.</p>
+                                        <div className="bg-purple-50 border-4 border-purple-600 p-4 md:p-6 mb-4 md:mb-6">
+                                            <p className="text-xs md:text-sm font-semibold text-purple-800 mb-1">ESCROW REFUND*</p>
+                                            <p className="text-2xl md:text-4xl font-bold text-purple-600">${fmt(escrowRefund)}</p>
+                                            <p className="text-xs text-purple-700 mt-2">*From current lender after payoff</p>
                                         </div>
                                     )}
 
                                     {/* RATE COMPARISON */}
                                     {displayOptions.showCurrentVsNew && isRefi && borrowerInfo.currentRate && (
-                                        <div className="border-4 border-gray-300 p-8 mb-8">
+                                        <div className="border-4 border-gray-300 p-4 md:p-8 mb-6 md:mb-8">
                                             <div className="text-center mb-4">
-                                                <span className="text-xl font-bold">YOUR RATE DROP</span>
+                                                <span className="text-lg md:text-xl font-bold">YOUR RATE DROP</span>
                                             </div>
-                                            <div className="flex items-center justify-center gap-12">
+                                            <div className="flex items-center justify-center gap-4 md:gap-12">
                                                 <div className="text-center">
-                                                    <p className="text-sm text-gray-500 uppercase mb-2">Current Rate</p>
-                                                    <p className="text-5xl font-bold text-red-500">{borrowerInfo.currentRate}%</p>
+                                                    <p className="text-xs md:text-sm text-gray-500 uppercase mb-1 md:mb-2">Current</p>
+                                                    <p className="text-3xl md:text-5xl font-bold text-red-500">{borrowerInfo.currentRate}%</p>
                                                 </div>
-                                                <div className="text-4xl">→</div>
+                                                <div className="text-2xl md:text-4xl">→</div>
                                                 <div className="text-center">
-                                                    <p className="text-sm text-gray-500 uppercase mb-2">New Rate</p>
-                                                    <p className="text-5xl font-bold text-green-500">{lowestRate.toFixed(3)}%</p>
+                                                    <p className="text-xs md:text-sm text-gray-500 uppercase mb-1 md:mb-2">New</p>
+                                                    <p className="text-3xl md:text-5xl font-bold text-green-500">{lowestRate.toFixed(3)}%</p>
                                                 </div>
                                             </div>
                                         </div>
                                     )}
 
-                                    {/* TOTAL BENEFITS SUMMARY */}
+                                    {/* TOTAL BENEFITS */}
                                     {isRefi && (skipValue > 0 || escrowRefund > 0) && (
-                                        <div className="bg-gray-900 text-white p-8 mb-8">
-                                            <div className="text-center mb-6">
-                                                <p className="text-lg font-medium text-gray-300">TOTAL IMMEDIATE BENEFITS</p>
+                                        <div className="bg-gray-900 text-white p-4 md:p-8 mb-6 md:mb-8">
+                                            <div className="text-center mb-4 md:mb-6">
+                                                <p className="text-sm md:text-lg font-medium text-gray-300">TOTAL BENEFITS</p>
                                             </div>
-                                            <div className="grid grid-cols-3 gap-6 text-center">
+                                            <div className="grid grid-cols-3 gap-2 md:gap-6 text-center">
                                                 {skipValue > 0 && (
                                                     <div>
-                                                        <p className="text-sm text-gray-400">Skip Payments</p>
-                                                        <p className="text-3xl font-bold text-green-400">+${fmt(skipValue)}</p>
+                                                        <p className="text-xs text-gray-400">Skip Pmts</p>
+                                                        <p className="text-xl md:text-3xl font-bold text-green-400">+${fmt(skipValue)}</p>
                                                     </div>
                                                 )}
                                                 {escrowRefund > 0 && (
                                                     <div>
-                                                        <p className="text-sm text-gray-400">Escrow Refund*</p>
-                                                        <p className="text-3xl font-bold text-purple-400">+${fmt(escrowRefund)}</p>
+                                                        <p className="text-xs text-gray-400">Escrow</p>
+                                                        <p className="text-xl md:text-3xl font-bold text-purple-400">+${fmt(escrowRefund)}</p>
                                                     </div>
                                                 )}
                                                 <div>
-                                                    <p className="text-sm text-gray-400">Cash to Close</p>
-                                                    <p className="text-3xl font-bold text-blue-400">$0</p>
+                                                    <p className="text-xs text-gray-400">Cash Close</p>
+                                                    <p className="text-xl md:text-3xl font-bold text-blue-400">$0</p>
                                                 </div>
                                             </div>
-                                            <div className="text-center mt-6 pt-6 border-t border-gray-700">
-                                                <p className="text-sm text-gray-400">TOTAL CASH IN YOUR POCKET</p>
-                                                <p className="text-5xl font-bold text-green-400">${fmt(skipValue + escrowRefund)}</p>
+                                            <div className="text-center mt-4 md:mt-6 pt-4 md:pt-6 border-t border-gray-700">
+                                                <p className="text-xs md:text-sm text-gray-400">TOTAL CASH IN POCKET</p>
+                                                <p className="text-3xl md:text-5xl font-bold text-green-400">${fmt(skipValue + escrowRefund)}</p>
                                             </div>
                                         </div>
                                     )}
 
-                                    {/* LOAN OPTIONS CARDS */}
-                                    <h3 className="text-2xl font-bold mb-6">YOUR OPTIONS</h3>
-                                    <div className="grid gap-6 mb-8" style={{gridTemplateColumns: `repeat(${loanOptions.length}, 1fr)`}}>
-                                        {loanOptions.map((opt, idx) => {
-                                            const pmt = calculatePayment(borrowerInfo.loanAmount, opt.rate);
-                                            const apr = calculateAPR(borrowerInfo.loanAmount, opt.rate);
+                                    {/* LOAN OPTIONS */}
+                                    <h3 className="text-xl md:text-2xl font-bold mb-4 md:mb-6">YOUR OPTIONS</h3>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mb-6 md:mb-8">
+                                        {loanOptions.map((opt) => {
+                                            const pmt = calculatePayment(borrowerInfo.loanAmount, opt.rate, opt.term || 30);
+                                            const apr = calculateAPR(borrowerInfo.loanAmount, opt.rate, opt.term || 30);
                                             const costs = calculateCosts(borrowerInfo.loanAmount, opt.points, opt.lenderCredit);
                                             const savings = currentPmt - pmt.total;
                                             const cash = borrowerInfo.rollCostsIntoLoan ? 0 : costs.total;
 
                                             return (
-                                                <div key={opt.id} className="border-4 border-gray-300 p-6">
-                                                    <div className="text-center mb-6">
-                                                        <p className="text-sm font-semibold text-gray-600 mb-2">{opt.name.toUpperCase()}</p>
-                                                        <p className="text-5xl font-bold mb-1">{opt.rate}%</p>
-                                                        <p className="text-sm text-gray-600">APR: {apr.toFixed(3)}%</p>
+                                                <div key={opt.id} className="border-4 border-gray-300 p-4 md:p-6">
+                                                    <div className="text-center mb-4 md:mb-6">
+                                                        <p className="text-xs md:text-sm font-semibold text-gray-600 mb-1">{opt.name.toUpperCase()}</p>
+                                                        <p className="text-3xl md:text-5xl font-bold mb-1">{opt.rate}%</p>
+                                                        <p className="text-sm md:text-base font-semibold text-gray-800">{opt.term || 30}-Year Fixed</p>
+                                                        <p className="text-xs md:text-sm text-gray-600">APR: {apr.toFixed(3)}%</p>
                                                     </div>
 
                                                     {displayOptions.showMonthlySavings && savings > 0 && (
-                                                        <div className="bg-green-100 border-2 border-green-600 p-4 mb-4 text-center">
-                                                            <p className="text-sm font-bold text-green-800 mb-1">MONTHLY SAVINGS</p>
-                                                            <p className="text-3xl font-bold text-green-600">${fmt(savings)}</p>
-                                                            <p className="text-xs text-green-800 mt-1">vs. current payment</p>
+                                                        <div className="bg-green-100 border-2 border-green-600 p-3 md:p-4 mb-3 md:mb-4 text-center">
+                                                            <p className="text-xs md:text-sm font-bold text-green-800 mb-1">MONTHLY SAVINGS</p>
+                                                            <p className="text-2xl md:text-3xl font-bold text-green-600">${fmt(savings)}</p>
                                                         </div>
                                                     )}
 
-                                                    <div className="border-4 border-black p-4 bg-white mb-4">
-                                                        <p className="text-xs text-gray-600 mb-1">ESTIMATED MONTHLY PAYMENT</p>
-                                                        <p className="text-4xl font-bold mb-3">${fmt(pmt.total)}</p>
+                                                    <div className="border-4 border-black p-3 md:p-4 bg-white mb-3 md:mb-4">
+                                                        <p className="text-xs text-gray-600 mb-1">MONTHLY PAYMENT</p>
+                                                        <p className="text-2xl md:text-4xl font-bold mb-2 md:mb-3">${fmt(pmt.total)}</p>
                                                         <div className="text-xs space-y-1">
-                                                            <div className="flex justify-between"><span className="text-gray-600">Principal & Interest</span><span>${fmt(pmt.pi)}</span></div>
-                                                            {pmt.tax > 0 && <div className="flex justify-between"><span className="text-gray-600">Property Taxes</span><span>${fmt(pmt.tax)}</span></div>}
-                                                            {pmt.ins > 0 && <div className="flex justify-between"><span className="text-gray-600">Insurance</span><span>${fmt(pmt.ins)}</span></div>}
-                                                            {pmt.hoa > 0 && <div className="flex justify-between"><span className="text-gray-600">HOA</span><span>${fmt(pmt.hoa)}</span></div>}
+                                                            <div className="flex justify-between"><span>P&I</span><span>${fmt(pmt.pi)}</span></div>
+                                                            {pmt.tax > 0 && <div className="flex justify-between"><span>Tax</span><span>${fmt(pmt.tax)}</span></div>}
+                                                            {pmt.ins > 0 && <div className="flex justify-between"><span>Ins</span><span>${fmt(pmt.ins)}</span></div>}
                                                         </div>
                                                     </div>
 
-                                                    <div className={`p-4 text-center ${cash === 0 ? 'bg-green-100 border-4 border-green-600' : 'bg-gray-100 border-2 border-gray-300'}`}>
+                                                    <div className={`p-3 md:p-4 text-center ${cash === 0 ? 'bg-green-100 border-4 border-green-600' : 'bg-gray-100 border-2 border-gray-300'}`}>
                                                         <p className="text-xs text-gray-600 mb-1">CASH TO CLOSE</p>
-                                                        <p className={`text-3xl font-bold ${cash === 0 ? 'text-green-600' : ''}`}>${fmt(cash)}</p>
-                                                    </div>
-
-                                                    <div className="mt-4 text-center text-sm text-gray-600">
-                                                        {opt.points > 0 && <p>${opt.points.toLocaleString()} in discount points</p>}
-                                                        {opt.lenderCredit > 0 && <p>${opt.lenderCredit.toLocaleString()} lender credit</p>}
-                                                        {opt.points === 0 && opt.lenderCredit === 0 && <p>No points or credits</p>}
+                                                        <p className={`text-2xl md:text-3xl font-bold ${cash === 0 ? 'text-green-600' : ''}`}>${fmt(cash)}</p>
                                                     </div>
                                                 </div>
                                             );
@@ -655,28 +731,30 @@
                                     </div>
 
                                     {/* DISCLAIMER */}
-                                    <div className="bg-gray-100 border-l-4 border-black p-4 mb-8 text-xs text-gray-700">
-                                        <p className="font-semibold mb-2">IMPORTANT DISCLOSURES:</p>
-                                        <p>All figures shown are estimates. Actual costs, rates, and payments may vary. This is not a Loan Estimate or loan commitment. Rates subject to change without notice. All loans subject to credit approval. NMLS #{loanOfficer.companyNMLS}. Equal Housing Lender.</p>
+                                    <div className="bg-gray-100 border-l-4 border-black p-3 md:p-4 mb-6 md:mb-8 text-xs text-gray-700">
+                                        <p className="font-semibold mb-1">DISCLOSURES:</p>
+                                        <p>All figures are estimates. Not a Loan Estimate or commitment. Rates subject to change. NMLS #{loanOfficer.companyNMLS}. Equal Housing Lender.</p>
                                     </div>
 
                                     {/* CTA */}
-                                    <div className="bg-black text-white p-12 text-center">
-                                        <div className="mb-4 bg-white text-black inline-block px-4 py-2 text-sm font-bold">SOFT PULL ONLY - NO CREDIT SCORE IMPACT</div>
-                                        <h3 className="text-3xl font-bold mb-4">READY TO MOVE FORWARD?</h3>
-                                        <p className="text-gray-300 mb-6 text-lg">Lock in your rate and secure your loan by starting your application today.</p>
-                                        <button onClick={() => setShowApp(true)} className="bg-white text-black px-12 py-4 text-xl font-bold hover:bg-gray-200">START MY APPLICATION →</button>
+                                    <div className="bg-black text-white p-6 md:p-12 text-center">
+                                        <div className="mb-3 md:mb-4 bg-white text-black inline-block px-3 md:px-4 py-1 md:py-2 text-xs md:text-sm font-bold">SOFT PULL ONLY</div>
+                                        <h3 className="text-xl md:text-3xl font-bold mb-3 md:mb-4">READY TO START?</h3>
+                                        <button onClick={() => setShowApp(true)} className="w-full md:w-auto bg-white text-black px-8 md:px-12 py-3 md:py-4 text-lg md:text-xl font-bold">START APPLICATION →</button>
                                     </div>
 
                                     {/* CONTACT */}
-                                    <div className="mt-8 text-center border-t-2 border-gray-200 pt-8">
-                                        <h4 className="font-bold mb-4">GOT QUESTIONS?</h4>
-                                        <div className="flex justify-center gap-8">
-                                            <a href={`tel:${loanOfficer.phone}`} className="flex items-center gap-2 text-black hover:underline font-semibold">
-                                                <Icon name="Phone" size={20} /> {loanOfficer.phone}
+                                    <div className="mt-6 md:mt-8 text-center pt-6 md:pt-8 border-t-2 border-gray-200">
+                                        <h4 className="font-bold mb-4">QUESTIONS?</h4>
+                                        <div className="flex flex-col md:flex-row justify-center gap-3 md:gap-6">
+                                            <a href={`tel:${loanOfficer.phone}`} className="flex items-center justify-center gap-2 bg-black text-white px-6 py-3 font-semibold">
+                                                <Icon name="Phone" size={20} /> CALL
                                             </a>
-                                            <a href={`sms:${loanOfficer.phone}`} className="flex items-center gap-2 text-black hover:underline font-semibold">
-                                                <Icon name="MessageSquare" size={20} /> Text Me
+                                            <a href={`sms:${loanOfficer.phone}`} className="flex items-center justify-center gap-2 bg-gray-800 text-white px-6 py-3 font-semibold">
+                                                <Icon name="MessageSquare" size={20} /> TEXT
+                                            </a>
+                                            <a href={`mailto:${loanOfficer.email}`} className="flex items-center justify-center gap-2 border-2 border-black px-6 py-3 font-semibold">
+                                                <Icon name="Mail" size={20} /> EMAIL
                                             </a>
                                         </div>
                                     </div>
