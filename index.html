@@ -3,19 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Oakstone Capital Mortgage - Loan Quote Tool</title>
+    <title>Oakstone Capital Mortgage - Loan Quote</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <style>
-        * { box-sizing: border-box; }
         body { margin: 0; font-family: system-ui, -apple-system, sans-serif; }
-        @media print {
-            .no-print { display: none !important; }
-            .print-break { page-break-before: always; }
-        }
+        @media print { .no-print { display: none !important; } }
     </style>
 </head>
 <body>
@@ -24,107 +20,61 @@
     <script type="text/babel">
         const { useState, useEffect } = React;
         
-        // Icon components using Lucide
-        const Icon = ({ name, size = 24, className = "" }) => {
+        const Icon = ({ name, size = 24 }) => {
             const ref = React.useRef(null);
             useEffect(() => {
-                if (ref.current) {
+                if (ref.current && lucide.icons[name]) {
                     ref.current.innerHTML = '';
                     const icon = lucide.createElement(lucide.icons[name]);
                     icon.setAttribute('width', size);
                     icon.setAttribute('height', size);
-                    if (className) icon.setAttribute('class', className);
                     ref.current.appendChild(icon);
                 }
-            }, [name, size, className]);
+            }, [name, size]);
             return <span ref={ref} style={{display: 'inline-flex', alignItems: 'center'}}></span>;
         };
 
-        function LoanOfferDashboard() {
+        function App() {
             const [view, setView] = useState('input');
             const [showApp, setShowApp] = useState(false);
             const [expandedFees, setExpandedFees] = useState({});
-            const [showComparison, setShowComparison] = useState(false);
-            const [showAmortization, setShowAmortization] = useState({});
             const [leadDatabase, setLeadDatabase] = useState([]);
             const [showColumnMapping, setShowColumnMapping] = useState(false);
             const [csvData, setCsvData] = useState(null);
-            const [columnMap, setColumnMap] = useState({
-                name: '', email: '', phone: '', address: '', city: '', state: '', zip: '', balance: ''
-            });
+            const [columnMap, setColumnMap] = useState({ name: '', email: '', phone: '', address: '', city: '', state: '', zip: '', balance: '' });
             const [searchQuery, setSearchQuery] = useState('');
             const [showSearchResults, setShowSearchResults] = useState(false);
             
             const [borrowerInfo, setBorrowerInfo] = useState({
-                name: 'John Martinez',
-                email: 'john.martinez@email.com',
-                phone: '949-555-1234',
-                address: '123 Ocean View Drive',
-                city: 'Irvine',
-                state: 'CA',
-                zip: '92618',
-                loanAmount: '450000',
-                propertyValue: '650000',
-                downPayment: '',
-                program: 'VA IRRRL',
-                loanPurpose: 'Refinance',
-                vaFirstTimeUse: true,
-                vaFundingFeeExempt: false,
-                llpaExempt: true,
-                currentMonthlyPayment: '3250',
-                currentRate: '7.250',
-                estimatedEscrow: '4200',
-                monthlyTax: '680',
-                monthlyInsurance: '195',
-                monthlyHOA: '0',
-                rollCostsIntoLoan: true
+                name: 'John Martinez', email: 'john.martinez@email.com', phone: '949-555-1234',
+                address: '123 Ocean View Drive', city: 'Irvine', state: 'CA', zip: '92618',
+                loanAmount: '450000', propertyValue: '650000', downPayment: '',
+                program: 'VA IRRRL', loanPurpose: 'Refinance',
+                vaFirstTimeUse: true, vaFundingFeeExempt: false, llpaExempt: true,
+                currentMonthlyPayment: '3250', currentRate: '7.250', estimatedEscrow: '4200',
+                monthlyTax: '680', monthlyInsurance: '195', monthlyHOA: '0', rollCostsIntoLoan: true
             });
 
             const [displayOptions, setDisplayOptions] = useState({
-                showFullBreakdown: true,
-                showMonthlySavings: true,
-                showSkipPayments: true,
-                paymentsToSkip: 2,
-                showBreakEven: true,
-                showInterestSavings: true,
-                showLifetimeCost: true,
-                showEscrowRefund: true,
-                showCurrentVsNew: true
+                showFullBreakdown: true, showMonthlySavings: true, showSkipPayments: true,
+                paymentsToSkip: 2, showEscrowRefund: true, showCurrentVsNew: true, showLifetimeCost: false
             });
 
             const [loanOfficer, setLoanOfficer] = useState({
-                name: 'Steven Anderson',
-                nmls: '123456',
-                phone: '7143005428',
+                name: 'Steven Anderson', nmls: '123456', phone: '7143005428',
                 email: 'steven@oakstonecapitalmortgage.com',
-                companyName: 'Oakstone Capital Mortgage',
-                companyNMLS: '2585868',
-                logoUrl: ''
+                companyName: 'Oakstone Capital Mortgage', companyNMLS: '2585868', logoUrl: ''
             });
 
             const [appSettings, setAppSettings] = useState({
-                appType: 'arrive',
-                arriveUrl: 'https://2585868.myagentloans.com/register',
-                customAppUrl: '',
-                textNumber: '',
-                emailAddress: ''
+                appType: 'arrive', arriveUrl: 'https://2585868.myagentloans.com/register', customAppUrl: ''
             });
 
             const [customFees, setCustomFees] = useState({
-                originationFee: '4500',
-                processingFee: '495',
-                underwritingFee: '895',
-                appraisalFee: '0',
-                creditReport: '0',
-                floodCert: '15',
-                taxService: '85',
-                titleInsurance: '950',
-                titleSettlement: '650',
-                titleSearch: '275',
-                recording: '350',
-                survey: '0',
-                llpaFee: '',
-                fundingFee: ''
+                originationFee: '4500', processingFee: '495', underwritingFee: '895',
+                appraisalFee: '0', creditReport: '0', floodCert: '15', taxService: '85',
+                titleInsurance: '950', titleSettlement: '650', titleSearch: '275',
+                recording: '350', survey: '0', llpaFee: '', fundingFee: ''
             });
 
             const [loanOptions, setLoanOptions] = useState([
@@ -133,62 +83,47 @@
                 { id: 3, name: 'No Cost', rate: '6.625', points: 0, lenderCredit: 5500 }
             ]);
 
-            // Load saved data on mount
             useEffect(() => {
-                const savedLeads = localStorage.getItem('oakstone_lead_database');
-                if (savedLeads) {
-                    try { setLeadDatabase(JSON.parse(savedLeads)); } catch (e) {}
-                }
-                const savedProfile = localStorage.getItem('oakstone_lo_profile');
-                if (savedProfile) {
-                    try {
+                try {
+                    const savedLeads = localStorage.getItem('oakstone_lead_database');
+                    if (savedLeads) setLeadDatabase(JSON.parse(savedLeads));
+                    const savedProfile = localStorage.getItem('oakstone_lo_profile');
+                    if (savedProfile) {
                         const data = JSON.parse(savedProfile);
                         if (data.loanOfficer) setLoanOfficer(data.loanOfficer);
                         if (data.appSettings) setAppSettings(data.appSettings);
                         if (data.customFees) setCustomFees(data.customFees);
-                    } catch (e) {}
-                }
+                    }
+                } catch (e) {}
             }, []);
-
-            const toggleFeeBreakdown = (optionId) => {
-                setExpandedFees(prev => ({ ...prev, [optionId]: !prev[optionId] }));
-            };
-
-            const toggleAmortization = (optionId) => {
-                setShowAmortization(prev => ({ ...prev, [optionId]: !prev[optionId] }));
-            };
 
             const saveLOProfile = () => {
                 localStorage.setItem('oakstone_lo_profile', JSON.stringify({ loanOfficer, appSettings, customFees }));
-                alert('✓ Profile Saved!');
+                alert('Profile saved');
             };
 
             const loadLOProfile = () => {
                 const saved = localStorage.getItem('oakstone_lo_profile');
                 if (saved) {
                     const data = JSON.parse(saved);
-                    setLoanOfficer(data.loanOfficer || loanOfficer);
-                    setAppSettings(data.appSettings || appSettings);
-                    setCustomFees(data.customFees || customFees);
-                    alert('✓ Profile Loaded!');
-                } else {
-                    alert('No saved profile found.');
+                    if (data.loanOfficer) setLoanOfficer(data.loanOfficer);
+                    if (data.appSettings) setAppSettings(data.appSettings);
+                    if (data.customFees) setCustomFees(data.customFees);
                 }
             };
 
-            const handleCSVUpload = (event) => {
-                const file = event.target.files[0];
+            const handleCSVUpload = (e) => {
+                const file = e.target.files[0];
                 if (!file) return;
                 const reader = new FileReader();
-                reader.onload = (e) => {
-                    const text = e.target.result;
-                    const rows = text.split('\n').filter(row => row.trim());
-                    if (rows.length === 0) { alert('CSV file is empty'); return; }
+                reader.onload = (ev) => {
+                    const rows = ev.target.result.split('\n').filter(r => r.trim());
+                    if (!rows.length) return;
                     const headers = rows[0].split(',').map(h => h.trim().replace(/"/g, ''));
                     const data = rows.slice(1).map(row => {
-                        const values = row.split(',').map(v => v.trim().replace(/"/g, ''));
+                        const vals = row.split(',').map(v => v.trim().replace(/"/g, ''));
                         const obj = {};
-                        headers.forEach((header, index) => { obj[header] = values[index] || ''; });
+                        headers.forEach((h, i) => obj[h] = vals[i] || '');
                         return obj;
                     });
                     setCsvData({ headers, data });
@@ -198,256 +133,125 @@
             };
 
             const saveLeadDatabase = () => {
-                if (!csvData || !columnMap.name) { alert('Please map at least the Name column'); return; }
-                const mappedLeads = csvData.data.map(row => ({
-                    name: row[columnMap.name] || '',
-                    email: row[columnMap.email] || '',
-                    phone: row[columnMap.phone] || '',
-                    address: row[columnMap.address] || '',
-                    city: row[columnMap.city] || '',
-                    state: row[columnMap.state] || '',
-                    zip: row[columnMap.zip] || '',
-                    balance: row[columnMap.balance] || ''
-                })).filter(lead => lead.name);
-                setLeadDatabase(mappedLeads);
-                localStorage.setItem('oakstone_lead_database', JSON.stringify(mappedLeads));
+                if (!csvData || !columnMap.name) return;
+                const leads = csvData.data.map(row => ({
+                    name: row[columnMap.name] || '', email: row[columnMap.email] || '',
+                    phone: row[columnMap.phone] || '', address: row[columnMap.address] || '',
+                    city: row[columnMap.city] || '', state: row[columnMap.state] || '',
+                    zip: row[columnMap.zip] || '', balance: row[columnMap.balance] || ''
+                })).filter(l => l.name);
+                setLeadDatabase(leads);
+                localStorage.setItem('oakstone_lead_database', JSON.stringify(leads));
                 setShowColumnMapping(false);
                 setCsvData(null);
-                alert(`✓ ${mappedLeads.length.toLocaleString()} leads imported!`);
             };
 
-            const searchLeads = (query) => {
-                if (!query || query.length < 2) return [];
-                const lowerQuery = query.toLowerCase();
-                return leadDatabase.filter(lead => 
-                    lead.name.toLowerCase().includes(lowerQuery) ||
-                    lead.email.toLowerCase().includes(lowerQuery) ||
-                    lead.phone.includes(query)
-                ).slice(0, 10);
+            const searchLeads = (q) => {
+                if (!q || q.length < 2) return [];
+                const lq = q.toLowerCase();
+                return leadDatabase.filter(l => l.name.toLowerCase().includes(lq) || l.email.toLowerCase().includes(lq) || l.phone.includes(q)).slice(0, 10);
             };
 
             const selectLead = (lead) => {
-                setBorrowerInfo({
-                    ...borrowerInfo,
-                    name: lead.name, email: lead.email, phone: lead.phone,
-                    address: lead.address, city: lead.city, state: lead.state,
-                    zip: lead.zip, loanAmount: lead.balance || borrowerInfo.loanAmount
-                });
-                setSearchQuery('');
-                setShowSearchResults(false);
+                setBorrowerInfo({ ...borrowerInfo, ...lead, loanAmount: lead.balance || borrowerInfo.loanAmount });
+                setSearchQuery(''); setShowSearchResults(false);
             };
 
             const clearLeadDatabase = () => {
-                if (confirm(`Delete ${leadDatabase.length.toLocaleString()} leads?`)) {
+                if (confirm('Clear all leads?')) {
                     setLeadDatabase([]);
                     localStorage.removeItem('oakstone_lead_database');
-                    alert('✓ Lead database cleared');
                 }
             };
 
-            const getVAFundingFee = (loanAmount, isExempt, isFirstTime, downPaymentPct, isIRRRL) => {
-                if (customFees.fundingFee) return parseFloat(customFees.fundingFee);
-                if (isExempt) return 0;
-                if (isIRRRL) return parseFloat(loanAmount) * 0.005;
-                const principal = parseFloat(loanAmount);
-                let rate = 0;
-                if (isFirstTime) {
-                    if (downPaymentPct >= 10) rate = 0.0125;
-                    else if (downPaymentPct >= 5) rate = 0.015;
-                    else rate = 0.0215;
-                } else {
-                    if (downPaymentPct >= 10) rate = 0.0125;
-                    else if (downPaymentPct >= 5) rate = 0.015;
-                    else rate = 0.033;
-                }
-                return principal * rate;
-            };
-
-            const getLoanTypeInfo = (program) => {
-                const info = {
-                    'Conventional': { miRate: 0.0055 },
-                    'FHA': { upfrontMI: 0.0175, annualMI: 0.0085 },
-                    'VA': { miRate: 0 },
-                    'USDA': { upfrontMI: 0.01, annualMI: 0.0035 },
-                    'Jumbo': { miRate: 0 },
-                    'VA IRRRL': { miRate: 0 }
-                };
-                return info[program] || info['Conventional'];
-            };
-
-            const calculatePI = (loanAmount, rate) => {
-                if (!loanAmount || !rate) return 0;
-                const P = parseFloat(loanAmount);
-                const r = parseFloat(rate) / 100 / 12;
-                const n = 360;
+            const calculatePI = (amt, rate) => {
+                if (!amt || !rate) return 0;
+                const P = parseFloat(amt), r = parseFloat(rate) / 100 / 12, n = 360;
                 return P * (r * Math.pow(1 + r, n)) / (Math.pow(1 + r, n) - 1);
             };
 
-            const calculateFullPayment = (loanAmount, rate, propertyValue) => {
-                const pi = calculatePI(loanAmount, rate);
-                if (!pi) return { pi: 0, tax: 0, insurance: 0, hoa: 0, mi: 0, total: 0 };
-                const principal = parseFloat(loanAmount);
+            const calculatePayment = (amt, rate) => {
+                const pi = calculatePI(amt, rate);
                 const tax = parseFloat(borrowerInfo.monthlyTax) || 0;
-                const insurance = parseFloat(borrowerInfo.monthlyInsurance) || 0;
+                const ins = parseFloat(borrowerInfo.monthlyInsurance) || 0;
                 const hoa = parseFloat(borrowerInfo.monthlyHOA) || 0;
-                let mi = 0;
-                const loanInfo = getLoanTypeInfo(borrowerInfo.program);
-                if (borrowerInfo.program === 'FHA') {
-                    mi = (principal * loanInfo.annualMI) / 12;
-                } else if (borrowerInfo.program === 'Conventional' && propertyValue) {
-                    const ltv = principal / parseFloat(propertyValue);
-                    if (ltv > 0.80) mi = (principal * loanInfo.miRate) / 12;
-                } else if (borrowerInfo.program === 'USDA') {
-                    mi = (principal * loanInfo.annualMI) / 12;
-                }
-                return { pi, tax, insurance, hoa, mi, total: pi + tax + insurance + hoa + mi };
+                return { pi, tax, ins, hoa, total: pi + tax + ins + hoa };
             };
 
-            const calculateTotalInterest = (loanAmount, rate) => {
-                if (!loanAmount || !rate) return 0;
-                const monthlyPayment = calculatePI(loanAmount, rate);
-                const totalPaid = monthlyPayment * 360;
-                return totalPaid - parseFloat(loanAmount);
+            const getVAFundingFee = (amt) => {
+                if (customFees.fundingFee) return parseFloat(customFees.fundingFee);
+                if (borrowerInfo.vaFundingFeeExempt) return 0;
+                if (borrowerInfo.program === 'VA IRRRL') return parseFloat(amt) * 0.005;
+                return 0;
             };
 
-            const calculateBreakEven = (option1, option2) => {
-                if (!option1.rate || !option2.rate || !borrowerInfo.loanAmount) return null;
-                const payment1 = calculatePI(borrowerInfo.loanAmount, option1.rate);
-                const payment2 = calculatePI(borrowerInfo.loanAmount, option2.rate);
-                const monthlySavings = payment2 - payment1;
-                if (monthlySavings <= 0) return null;
-                const upfrontCost = option1.points - option2.points;
-                if (upfrontCost <= 0) return null;
-                const monthsToBreakEven = upfrontCost / monthlySavings;
-                return {
-                    months: Math.round(monthsToBreakEven),
-                    years: (monthsToBreakEven / 12).toFixed(1),
-                    monthlySavings, upfrontCost
+            const calculateCosts = (amt, pts, credit) => {
+                const sA = {
+                    origination: parseFloat(customFees.originationFee) || parseFloat(amt) * 0.01,
+                    processing: parseFloat(customFees.processingFee) || 495,
+                    underwriting: parseFloat(customFees.underwritingFee) || 895
                 };
-            };
-
-            const generateAmortization = (loanAmount, rate) => {
-                if (!loanAmount || !rate) return [];
-                const principal = parseFloat(loanAmount);
-                const monthlyRate = parseFloat(rate) / 100 / 12;
-                const monthlyPayment = calculatePI(loanAmount, rate);
-                let balance = principal;
-                const schedule = [];
-                for (let month = 1; month <= 360; month++) {
-                    const interestPayment = balance * monthlyRate;
-                    const principalPayment = monthlyPayment - interestPayment;
-                    balance -= principalPayment;
-                    if (month <= 12 || month % 12 === 0) {
-                        schedule.push({ month, year: Math.ceil(month / 12), payment: monthlyPayment, principal: principalPayment, interest: interestPayment, balance: Math.max(0, balance) });
-                    }
-                }
-                return schedule;
-            };
-
-            const getSectionA = (loanAmount) => {
-                const principal = parseFloat(loanAmount) || 0;
-                return {
-                    originationFee: customFees.originationFee ? parseFloat(customFees.originationFee) : principal * 0.01,
-                    processingFee: customFees.processingFee ? parseFloat(customFees.processingFee) : 495,
-                    underwritingFee: customFees.underwritingFee ? parseFloat(customFees.underwritingFee) : 895
+                const sB = {
+                    appraisal: parseFloat(customFees.appraisalFee) || 0,
+                    credit: parseFloat(customFees.creditReport) || 0,
+                    flood: parseFloat(customFees.floodCert) || 15,
+                    tax: parseFloat(customFees.taxService) || 85
                 };
-            };
-
-            const getSectionB = () => {
-                const isIRRRL = borrowerInfo.program === 'VA IRRRL';
-                return {
-                    appraisalFee: customFees.appraisalFee ? parseFloat(customFees.appraisalFee) : (isIRRRL ? 0 : 550),
-                    creditReport: customFees.creditReport ? parseFloat(customFees.creditReport) : (isIRRRL ? 0 : 100),
-                    floodCert: customFees.floodCert ? parseFloat(customFees.floodCert) : 15,
-                    taxService: customFees.taxService ? parseFloat(customFees.taxService) : 85
+                const sC = {
+                    titleIns: parseFloat(customFees.titleInsurance) || 800,
+                    settlement: parseFloat(customFees.titleSettlement) || 600,
+                    search: parseFloat(customFees.titleSearch) || 250,
+                    recording: parseFloat(customFees.recording) || 350
                 };
+                const funding = getVAFundingFee(amt);
+                const totA = Object.values(sA).reduce((a, b) => a + b, 0);
+                const totB = Object.values(sB).reduce((a, b) => a + b, 0);
+                const totC = Object.values(sC).reduce((a, b) => a + b, 0);
+                const total = totA + totB + totC + funding + (parseFloat(pts) || 0) - (parseFloat(credit) || 0);
+                return { sA, sB, sC, funding, totA, totB, totC, total };
             };
 
-            const getSectionC = () => {
-                const isPurchase = borrowerInfo.loanPurpose === 'Purchase';
-                return {
-                    titleInsurance: customFees.titleInsurance ? parseFloat(customFees.titleInsurance) : (isPurchase ? 1200 : 800),
-                    titleSettlement: customFees.titleSettlement ? parseFloat(customFees.titleSettlement) : (isPurchase ? 800 : 600),
-                    titleSearch: customFees.titleSearch ? parseFloat(customFees.titleSearch) : (isPurchase ? 300 : 250),
-                    recording: customFees.recording ? parseFloat(customFees.recording) : 350,
-                    survey: customFees.survey ? parseFloat(customFees.survey) : (isPurchase ? 200 : 0)
-                };
-            };
-
-            const calculateClosingCosts = (loanAmount, points, lenderCredit) => {
-                const principal = parseFloat(loanAmount) || 0;
-                const sectionA = getSectionA(loanAmount);
-                const sectionB = getSectionB();
-                const sectionC = getSectionC();
-                let fundingFee = 0;
-                const downPaymentPct = borrowerInfo.downPayment && borrowerInfo.propertyValue ? (parseFloat(borrowerInfo.downPayment) / parseFloat(borrowerInfo.propertyValue)) * 100 : 0;
-                if (borrowerInfo.program === 'VA' || borrowerInfo.program === 'VA IRRRL') {
-                    fundingFee = getVAFundingFee(loanAmount, borrowerInfo.vaFundingFeeExempt, borrowerInfo.vaFirstTimeUse, downPaymentPct, borrowerInfo.program === 'VA IRRRL');
-                } else if (borrowerInfo.program === 'FHA') {
-                    fundingFee = principal * getLoanTypeInfo('FHA').upfrontMI;
-                } else if (borrowerInfo.program === 'USDA') {
-                    fundingFee = principal * getLoanTypeInfo('USDA').upfrontMI;
-                }
-                const llpa = customFees.llpaFee ? parseFloat(customFees.llpaFee) : (borrowerInfo.llpaExempt ? 0 : principal * 0.005);
-                const totalA = Object.values(sectionA).reduce((sum, val) => sum + val, 0);
-                const totalB = Object.values(sectionB).reduce((sum, val) => sum + val, 0);
-                const totalC = Object.values(sectionC).reduce((sum, val) => sum + val, 0);
-                const subtotal = totalA + totalB + totalC + fundingFee + llpa + parseFloat(points || 0) - parseFloat(lenderCredit || 0);
-                return { sectionA, sectionB, sectionC, fundingFee, llpa, points: parseFloat(points || 0), lenderCredit: parseFloat(lenderCredit || 0), totalA, totalB, totalC, total: subtotal };
-            };
-
-            const calculateAPR = (loanAmount, rate) => {
-                if (!loanAmount || !rate) return parseFloat(rate);
-                const costs = calculateClosingCosts(loanAmount, 0, 0);
-                const principal = parseFloat(loanAmount);
-                const monthlyRate = parseFloat(rate) / 100 / 12;
-                const feeImpact = (costs.total / principal) / 30;
-                return (monthlyRate + (feeImpact / 12)) * 12 * 100;
+            const calculateAPR = (amt, rate) => {
+                if (!amt || !rate) return parseFloat(rate) || 0;
+                const costs = calculateCosts(amt, 0, 0);
+                const P = parseFloat(amt);
+                const r = parseFloat(rate) / 100 / 12;
+                const impact = (costs.total / P) / 30 / 12;
+                return (r + impact) * 12 * 100;
             };
 
             const addOption = () => {
-                if (loanOptions.length >= 3) return;
-                setLoanOptions([...loanOptions, { id: Date.now(), name: `Option ${loanOptions.length + 1}`, rate: '', points: 0, lenderCredit: 0 }]);
+                if (loanOptions.length < 3) {
+                    setLoanOptions([...loanOptions, { id: Date.now(), name: `Option ${loanOptions.length + 1}`, rate: '', points: 0, lenderCredit: 0 }]);
+                }
             };
 
-            const removeOption = (id) => {
-                if (loanOptions.length > 1) setLoanOptions(loanOptions.filter(opt => opt.id !== id));
-            };
+            const removeOption = (id) => { if (loanOptions.length > 1) setLoanOptions(loanOptions.filter(o => o.id !== id)); };
+            const updateOption = (id, field, val) => setLoanOptions(loanOptions.map(o => o.id === id ? { ...o, [field]: val } : o));
 
-            const updateOption = (id, field, value) => {
-                setLoanOptions(loanOptions.map(opt => opt.id === id ? { ...opt, [field]: value } : opt));
-            };
-
-            const sendOffer = () => alert(`Offer sent to ${borrowerInfo.email}`);
-            
             const isIRRRL = borrowerInfo.program === 'VA IRRRL';
-            const isVA = borrowerInfo.program === 'VA' || borrowerInfo.program === 'VA IRRRL';
+            const isVA = borrowerInfo.program === 'VA' || isIRRRL;
             const isRefi = borrowerInfo.loanPurpose === 'Refinance' || borrowerInfo.loanPurpose === 'Cash-Out Refi' || isIRRRL;
-            
-            const getAppUrl = () => {
-                if (appSettings.appType === 'custom' && appSettings.customAppUrl) return appSettings.customAppUrl;
-                return `${appSettings.arriveUrl}?time=${Date.now()}`;
-            };
 
+            const currentPmt = parseFloat(borrowerInfo.currentMonthlyPayment) || 0;
             const escrowRefund = parseFloat(borrowerInfo.estimatedEscrow) || 0;
-            const currentPayment = parseFloat(borrowerInfo.currentMonthlyPayment) || 0;
-            const skipPaymentValue = displayOptions.paymentsToSkip * currentPayment;
-            const lowestRate = loanOptions.length > 0 ? Math.min(...loanOptions.map(o => parseFloat(o.rate) || 99)) : 0;
+            const skipValue = displayOptions.paymentsToSkip * currentPmt;
+            const lowestRate = Math.min(...loanOptions.map(o => parseFloat(o.rate) || 99));
 
-            const fmt = (n) => n.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+            const fmt = (n) => Math.round(n).toLocaleString();
 
             return (
                 <div className="min-h-screen bg-white">
-                    {/* HEADER */}
-                    <div className="bg-black text-white px-8 py-6 no-print">
+                    {/* HEADER - BOLD BLACK */}
+                    <div className="bg-black text-white px-8 py-6 border-b-4 border-gray-900 no-print">
                         <div className="max-w-7xl mx-auto flex justify-between items-center">
                             <div>
-                                <h1 className="text-3xl font-bold">{loanOfficer.companyName.toUpperCase()}</h1>
-                                <p className="text-gray-400 text-sm">NMLS #{loanOfficer.companyNMLS}</p>
+                                <h1 className="text-3xl font-bold tracking-tight">{loanOfficer.companyName.toUpperCase()}</h1>
+                                <p className="text-gray-400 text-sm mt-1">Mortgage Lending | NMLS #{loanOfficer.companyNMLS}</p>
                             </div>
                             <div className="flex gap-3">
-                                <button onClick={() => setView('input')} className={`px-6 py-2 font-semibold ${view === 'input' ? 'bg-white text-black' : 'bg-gray-800 hover:bg-gray-700'}`}>INPUT</button>
-                                <button onClick={() => setView('preview')} className={`px-6 py-2 font-semibold flex items-center gap-2 ${view === 'preview' ? 'bg-white text-black' : 'bg-gray-800 hover:bg-gray-700'}`}>
+                                <button onClick={() => setView('input')} className={`px-6 py-2 font-semibold transition-all ${view === 'input' ? 'bg-white text-black' : 'bg-gray-800 text-white hover:bg-gray-700'}`}>INPUT</button>
+                                <button onClick={() => setView('preview')} className={`px-6 py-2 font-semibold transition-all flex items-center gap-2 ${view === 'preview' ? 'bg-white text-black' : 'bg-gray-800 text-white hover:bg-gray-700'}`}>
                                     <Icon name="Eye" size={18} /> PREVIEW
                                 </button>
                             </div>
@@ -461,34 +265,30 @@
                                 <div className="bg-black text-white p-6 flex justify-between items-center">
                                     <div>
                                         <h2 className="text-2xl font-bold">START YOUR APPLICATION</h2>
-                                        <p className="text-gray-300 text-sm">Soft pull only</p>
+                                        <p className="text-gray-300 text-sm">Soft pull only - No credit score impact</p>
                                     </div>
                                     <button onClick={() => setShowApp(false)} className="text-white hover:text-gray-300"><Icon name="X" size={24} /></button>
                                 </div>
-                                <iframe src={getAppUrl()} className="flex-1 border-0" title="Application" />
+                                <iframe src={appSettings.customAppUrl || appSettings.arriveUrl} className="flex-1 border-0" />
                             </div>
                         </div>
                     )}
 
-                    {/* CSV MAPPING MODAL */}
+                    {/* CSV MODAL */}
                     {showColumnMapping && csvData && (
                         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                            <div className="bg-white max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+                            <div className="bg-white max-w-4xl w-full">
                                 <div className="bg-purple-600 text-white p-6">
                                     <h2 className="text-2xl font-bold">MAP YOUR CSV COLUMNS</h2>
                                     <p className="text-sm mt-2">Found {csvData.data.length.toLocaleString()} rows</p>
                                 </div>
                                 <div className="p-8 space-y-4">
-                                    <div className="bg-yellow-100 border-l-4 border-yellow-600 p-4">
-                                        <p className="font-bold">Your CSV Columns:</p>
-                                        <p className="text-sm">{csvData.headers.join(', ')}</p>
-                                    </div>
                                     <div className="grid grid-cols-2 gap-4">
-                                        {['name', 'email', 'phone', 'address', 'city', 'state', 'zip', 'balance'].map(field => (
-                                            <div key={field}>
-                                                <label className="block text-sm font-semibold mb-2">{field.toUpperCase()}{field === 'name' ? ' (Required)' : ''}</label>
-                                                <select value={columnMap[field]} onChange={(e) => setColumnMap({...columnMap, [field]: e.target.value})} className="border-2 border-gray-300 px-4 py-3 w-full">
-                                                    <option value="">-- Select --</option>
+                                        {['name','email','phone','address','city','state','zip','balance'].map(f => (
+                                            <div key={f}>
+                                                <label className="block text-sm font-semibold mb-2">{f.toUpperCase()}{f === 'name' ? ' (Required)' : ''}</label>
+                                                <select value={columnMap[f]} onChange={e => setColumnMap({...columnMap, [f]: e.target.value})} className="border-2 border-gray-300 px-4 py-3 w-full">
+                                                    <option value="">-- Select Column --</option>
                                                     {csvData.headers.map(h => <option key={h} value={h}>{h}</option>)}
                                                 </select>
                                             </div>
@@ -506,87 +306,81 @@
                     <div className="max-w-7xl mx-auto p-8">
                         {view === 'input' ? (
                             <div className="space-y-8">
-                                {/* LO PROFILE */}
+                                {/* LO PROFILE - BOLD STYLE */}
                                 <div className="border-4 border-black p-6 bg-blue-50">
                                     <div className="flex justify-between items-start mb-6">
-                                        <h2 className="text-2xl font-bold">👤 YOUR LOAN OFFICER PROFILE</h2>
+                                        <h2 className="text-2xl font-bold">YOUR LOAN OFFICER PROFILE</h2>
                                         <div className="flex gap-2">
-                                            <button onClick={saveLOProfile} className="bg-black text-white px-4 py-2 font-semibold flex items-center gap-2"><Icon name="Save" size={18} /> SAVE</button>
-                                            <button onClick={loadLOProfile} className="bg-gray-700 text-white px-4 py-2 font-semibold">LOAD</button>
+                                            <button onClick={saveLOProfile} className="bg-black text-white px-4 py-2 font-semibold flex items-center gap-2 hover:bg-gray-800"><Icon name="Save" size={18} /> SAVE</button>
+                                            <button onClick={loadLOProfile} className="bg-gray-700 text-white px-4 py-2 font-semibold hover:bg-gray-600">LOAD</button>
                                         </div>
                                     </div>
-                                    <div className="grid grid-cols-3 gap-4 mb-4">
-                                        <input type="text" placeholder="Your Name" value={loanOfficer.name} onChange={(e) => setLoanOfficer({...loanOfficer, name: e.target.value})} className="border-2 border-gray-300 px-4 py-3" />
-                                        <input type="text" placeholder="NMLS ID" value={loanOfficer.nmls} onChange={(e) => setLoanOfficer({...loanOfficer, nmls: e.target.value})} className="border-2 border-gray-300 px-4 py-3" />
-                                        <input type="tel" placeholder="Phone" value={loanOfficer.phone} onChange={(e) => setLoanOfficer({...loanOfficer, phone: e.target.value})} className="border-2 border-gray-300 px-4 py-3" />
-                                        <input type="email" placeholder="Email" value={loanOfficer.email} onChange={(e) => setLoanOfficer({...loanOfficer, email: e.target.value})} className="border-2 border-gray-300 px-4 py-3 col-span-2" />
-                                        <input type="text" placeholder="Company Name" value={loanOfficer.companyName} onChange={(e) => setLoanOfficer({...loanOfficer, companyName: e.target.value})} className="border-2 border-gray-300 px-4 py-3" />
+                                    <div className="grid grid-cols-3 gap-4">
+                                        <input placeholder="Your Name" value={loanOfficer.name} onChange={e => setLoanOfficer({...loanOfficer, name: e.target.value})} className="border-2 border-gray-300 px-4 py-3 focus:border-black outline-none" />
+                                        <input placeholder="NMLS ID" value={loanOfficer.nmls} onChange={e => setLoanOfficer({...loanOfficer, nmls: e.target.value})} className="border-2 border-gray-300 px-4 py-3 focus:border-black outline-none" />
+                                        <input placeholder="Phone" value={loanOfficer.phone} onChange={e => setLoanOfficer({...loanOfficer, phone: e.target.value})} className="border-2 border-gray-300 px-4 py-3 focus:border-black outline-none" />
+                                        <input placeholder="Email" value={loanOfficer.email} onChange={e => setLoanOfficer({...loanOfficer, email: e.target.value})} className="border-2 border-gray-300 px-4 py-3 focus:border-black outline-none col-span-2" />
+                                        <input placeholder="Company Name" value={loanOfficer.companyName} onChange={e => setLoanOfficer({...loanOfficer, companyName: e.target.value})} className="border-2 border-gray-300 px-4 py-3 focus:border-black outline-none" />
                                     </div>
                                 </div>
 
                                 {/* DISPLAY OPTIONS */}
                                 <div className="border-2 border-black p-6 bg-yellow-50">
-                                    <h2 className="text-2xl font-bold mb-6">📊 WHAT TO SHOW CLIENTS</h2>
+                                    <h2 className="text-2xl font-bold mb-6">WHAT TO SHOW CLIENTS</h2>
                                     <div className="grid grid-cols-4 gap-4">
                                         {[
-                                            { key: 'showFullBreakdown', label: 'Fee Breakdown' },
-                                            { key: 'showMonthlySavings', label: 'Monthly Savings' },
-                                            { key: 'showBreakEven', label: 'Break-Even' },
-                                            { key: 'showInterestSavings', label: 'Interest Savings' },
-                                            { key: 'showLifetimeCost', label: 'Lifetime Cost' },
-                                            { key: 'showSkipPayments', label: 'Skip Payments 💰', color: 'green' },
-                                            { key: 'showEscrowRefund', label: 'Escrow Refund 💵', color: 'purple' },
-                                            { key: 'showCurrentVsNew', label: 'Rate Comparison', color: 'blue' }
-                                        ].map(opt => (
-                                            <label key={opt.key} className={`flex items-center gap-3 p-4 bg-white border-2 ${opt.color ? `border-${opt.color}-500` : 'border-gray-300'} cursor-pointer hover:border-black`}>
-                                                <input type="checkbox" checked={displayOptions[opt.key]} onChange={(e) => setDisplayOptions({...displayOptions, [opt.key]: e.target.checked})} className="w-5 h-5" />
-                                                <span className={`font-bold ${opt.color ? `text-${opt.color}-700` : ''}`}>{opt.label}</span>
+                                            ['showFullBreakdown', 'Full Fee Breakdown', 'Expandable costs'],
+                                            ['showMonthlySavings', 'Monthly Savings', 'vs current payment'],
+                                            ['showSkipPayments', 'Skip Payments', 'Highlight benefit'],
+                                            ['showEscrowRefund', 'Escrow Refund', 'From current lender'],
+                                            ['showCurrentVsNew', 'Rate Comparison', 'Current vs New'],
+                                            ['showLifetimeCost', 'Lifetime Cost', '30-year total']
+                                        ].map(([k, label, sub]) => (
+                                            <label key={k} className="flex items-center gap-3 p-4 bg-white border-2 border-gray-300 cursor-pointer hover:border-black">
+                                                <input type="checkbox" checked={displayOptions[k]} onChange={e => setDisplayOptions({...displayOptions, [k]: e.target.checked})} className="w-5 h-5" />
+                                                <div><p className="font-bold">{label}</p><p className="text-sm text-gray-600">{sub}</p></div>
                                             </label>
                                         ))}
                                     </div>
                                     {displayOptions.showSkipPayments && (
                                         <div className="mt-4 flex items-center gap-4">
-                                            <label className="font-semibold">Skip Payments:</label>
-                                            <select value={displayOptions.paymentsToSkip} onChange={(e) => setDisplayOptions({...displayOptions, paymentsToSkip: parseInt(e.target.value)})} className="border-2 border-gray-300 px-4 py-2">
-                                                <option value={1}>1</option>
-                                                <option value={2}>2</option>
-                                                <option value={3}>3</option>
+                                            <label className="font-semibold">Skip Payments Count:</label>
+                                            <select value={displayOptions.paymentsToSkip} onChange={e => setDisplayOptions({...displayOptions, paymentsToSkip: parseInt(e.target.value)})} className="border-2 border-gray-300 px-4 py-2">
+                                                <option value={1}>1 Payment</option>
+                                                <option value={2}>2 Payments</option>
+                                                <option value={3}>3 Payments</option>
                                             </select>
                                         </div>
                                     )}
                                 </div>
 
-                                {/* BORROWER INFO */}
+                                {/* BORROWER */}
                                 <div className="border-2 border-black p-6">
                                     <div className="flex justify-between items-center mb-6">
                                         <h2 className="text-2xl font-bold">BORROWER INFORMATION</h2>
                                         <div className="flex gap-2">
-                                            <label className="bg-purple-600 text-white px-4 py-2 font-semibold cursor-pointer flex items-center gap-2">
+                                            <label className="bg-purple-600 text-white px-4 py-2 font-semibold cursor-pointer hover:bg-purple-700 flex items-center gap-2">
                                                 <Icon name="Download" size={18} />
-                                                {leadDatabase.length > 0 ? `${leadDatabase.length} LEADS` : 'UPLOAD CSV'}
+                                                {leadDatabase.length > 0 ? `${leadDatabase.length.toLocaleString()} LEADS LOADED` : 'UPLOAD LEAD DATABASE'}
                                                 <input type="file" accept=".csv" onChange={handleCSVUpload} className="hidden" />
                                             </label>
                                             {leadDatabase.length > 0 && (
-                                                <button onClick={clearLeadDatabase} className="bg-red-600 text-white px-4 py-2 font-semibold">CLEAR</button>
+                                                <button onClick={clearLeadDatabase} className="bg-red-600 text-white px-4 py-2 font-semibold hover:bg-red-700">CLEAR</button>
                                             )}
                                         </div>
                                     </div>
 
                                     {leadDatabase.length > 0 && (
                                         <div className="mb-4 relative">
-                                            <input
-                                                type="text"
-                                                placeholder="🔍 Search leads..."
-                                                value={searchQuery}
-                                                onChange={(e) => { setSearchQuery(e.target.value); setShowSearchResults(e.target.value.length >= 2); }}
-                                                className="border-2 border-purple-500 px-4 py-3 w-full text-lg"
-                                            />
+                                            <input placeholder="Search leads by name, email, or phone..." value={searchQuery}
+                                                onChange={e => { setSearchQuery(e.target.value); setShowSearchResults(e.target.value.length >= 2); }}
+                                                className="border-2 border-purple-500 px-4 py-3 focus:border-purple-700 outline-none w-full text-lg" />
                                             {showSearchResults && searchQuery.length >= 2 && (
                                                 <div className="absolute z-10 w-full bg-white border-4 border-purple-600 mt-1 max-h-96 overflow-y-auto">
-                                                    {searchLeads(searchQuery).map((lead, idx) => (
-                                                        <div key={idx} onClick={() => selectLead(lead)} className="p-4 hover:bg-purple-100 cursor-pointer border-b">
-                                                            <p className="font-bold">{lead.name}</p>
-                                                            <p className="text-sm text-gray-600">{lead.email} • {lead.phone}</p>
+                                                    {searchLeads(searchQuery).map((l, i) => (
+                                                        <div key={i} onClick={() => selectLead(l)} className="p-4 hover:bg-purple-100 cursor-pointer border-b-2 border-purple-200">
+                                                            <p className="font-bold text-lg">{l.name}</p>
+                                                            <p className="text-sm text-gray-600">{l.email} | {l.phone}</p>
                                                         </div>
                                                     ))}
                                                 </div>
@@ -595,14 +389,14 @@
                                     )}
 
                                     <div className="grid grid-cols-2 gap-4">
-                                        <input type="text" placeholder="Borrower Name" value={borrowerInfo.name} onChange={(e) => setBorrowerInfo({...borrowerInfo, name: e.target.value})} className="border-2 border-gray-300 px-4 py-3" />
-                                        <input type="email" placeholder="Email" value={borrowerInfo.email} onChange={(e) => setBorrowerInfo({...borrowerInfo, email: e.target.value})} className="border-2 border-gray-300 px-4 py-3" />
-                                        <input type="tel" placeholder="Phone" value={borrowerInfo.phone} onChange={(e) => setBorrowerInfo({...borrowerInfo, phone: e.target.value})} className="border-2 border-gray-300 px-4 py-3 col-span-2" />
-                                        <input type="text" placeholder="Address" value={borrowerInfo.address} onChange={(e) => setBorrowerInfo({...borrowerInfo, address: e.target.value})} className="border-2 border-gray-300 px-4 py-3 col-span-2" />
-                                        <input type="text" placeholder="City" value={borrowerInfo.city} onChange={(e) => setBorrowerInfo({...borrowerInfo, city: e.target.value})} className="border-2 border-gray-300 px-4 py-3" />
+                                        <input placeholder="Borrower Name" value={borrowerInfo.name} onChange={e => setBorrowerInfo({...borrowerInfo, name: e.target.value})} className="border-2 border-gray-300 px-4 py-3 focus:border-black outline-none" />
+                                        <input placeholder="Email" value={borrowerInfo.email} onChange={e => setBorrowerInfo({...borrowerInfo, email: e.target.value})} className="border-2 border-gray-300 px-4 py-3 focus:border-black outline-none" />
+                                        <input placeholder="Phone" value={borrowerInfo.phone} onChange={e => setBorrowerInfo({...borrowerInfo, phone: e.target.value})} className="border-2 border-gray-300 px-4 py-3 focus:border-black outline-none col-span-2" />
+                                        <input placeholder="Property Address" value={borrowerInfo.address} onChange={e => setBorrowerInfo({...borrowerInfo, address: e.target.value})} className="border-2 border-gray-300 px-4 py-3 focus:border-black outline-none col-span-2" />
+                                        <input placeholder="City" value={borrowerInfo.city} onChange={e => setBorrowerInfo({...borrowerInfo, city: e.target.value})} className="border-2 border-gray-300 px-4 py-3 focus:border-black outline-none" />
                                         <div className="flex gap-4">
-                                            <input type="text" placeholder="State" value={borrowerInfo.state} onChange={(e) => setBorrowerInfo({...borrowerInfo, state: e.target.value})} className="border-2 border-gray-300 px-4 py-3 flex-1" />
-                                            <input type="text" placeholder="ZIP" value={borrowerInfo.zip} onChange={(e) => setBorrowerInfo({...borrowerInfo, zip: e.target.value})} className="border-2 border-gray-300 px-4 py-3 flex-1" />
+                                            <input placeholder="State" value={borrowerInfo.state} onChange={e => setBorrowerInfo({...borrowerInfo, state: e.target.value})} className="border-2 border-gray-300 px-4 py-3 focus:border-black outline-none flex-1" />
+                                            <input placeholder="ZIP" value={borrowerInfo.zip} onChange={e => setBorrowerInfo({...borrowerInfo, zip: e.target.value})} className="border-2 border-gray-300 px-4 py-3 focus:border-black outline-none flex-1" />
                                         </div>
                                     </div>
                                 </div>
@@ -612,69 +406,42 @@
                                     <h2 className="text-2xl font-bold mb-6">LOAN DETAILS</h2>
                                     <div className="grid grid-cols-4 gap-4 mb-4">
                                         <div>
-                                            <label className="block text-sm font-semibold mb-2">PURPOSE</label>
-                                            <select value={borrowerInfo.loanPurpose} onChange={(e) => setBorrowerInfo({...borrowerInfo, loanPurpose: e.target.value})} className="border-2 border-gray-300 px-4 py-3 w-full">
+                                            <label className="block text-sm font-semibold mb-2">LOAN PURPOSE</label>
+                                            <select value={borrowerInfo.loanPurpose} onChange={e => setBorrowerInfo({...borrowerInfo, loanPurpose: e.target.value})} className="border-2 border-gray-300 px-4 py-3 focus:border-black outline-none w-full">
                                                 <option>Purchase</option><option>Refinance</option><option>Cash-Out Refi</option>
                                             </select>
                                         </div>
                                         <div>
-                                            <label className="block text-sm font-semibold mb-2">PROGRAM</label>
-                                            <select value={borrowerInfo.program} onChange={(e) => setBorrowerInfo({...borrowerInfo, program: e.target.value})} className="border-2 border-gray-300 px-4 py-3 w-full">
+                                            <label className="block text-sm font-semibold mb-2">LOAN PROGRAM</label>
+                                            <select value={borrowerInfo.program} onChange={e => setBorrowerInfo({...borrowerInfo, program: e.target.value})} className="border-2 border-gray-300 px-4 py-3 focus:border-black outline-none w-full">
                                                 <option>Conventional</option><option>FHA</option><option>VA</option><option>VA IRRRL</option><option>USDA</option><option>Jumbo</option>
                                             </select>
                                         </div>
                                         <div>
                                             <label className="block text-sm font-semibold mb-2">LOAN AMOUNT</label>
-                                            <input type="number" value={borrowerInfo.loanAmount} onChange={(e) => setBorrowerInfo({...borrowerInfo, loanAmount: e.target.value})} className="border-2 border-gray-300 px-4 py-3 w-full" />
+                                            <input type="number" value={borrowerInfo.loanAmount} onChange={e => setBorrowerInfo({...borrowerInfo, loanAmount: e.target.value})} className="border-2 border-gray-300 px-4 py-3 focus:border-black outline-none w-full" />
                                         </div>
                                         <div>
                                             <label className="block text-sm font-semibold mb-2">PROPERTY VALUE</label>
-                                            <input type="number" value={borrowerInfo.propertyValue} onChange={(e) => setBorrowerInfo({...borrowerInfo, propertyValue: e.target.value})} className="border-2 border-gray-300 px-4 py-3 w-full" />
+                                            <input type="number" value={borrowerInfo.propertyValue} onChange={e => setBorrowerInfo({...borrowerInfo, propertyValue: e.target.value})} className="border-2 border-gray-300 px-4 py-3 focus:border-black outline-none w-full" />
                                         </div>
                                     </div>
                                     <div className="grid grid-cols-4 gap-4 mb-4">
-                                        <div>
-                                            <label className="block text-sm font-semibold mb-2">MONTHLY TAX</label>
-                                            <input type="number" value={borrowerInfo.monthlyTax} onChange={(e) => setBorrowerInfo({...borrowerInfo, monthlyTax: e.target.value})} className="border-2 border-gray-300 px-4 py-3 w-full" />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-semibold mb-2">MONTHLY INSURANCE</label>
-                                            <input type="number" value={borrowerInfo.monthlyInsurance} onChange={(e) => setBorrowerInfo({...borrowerInfo, monthlyInsurance: e.target.value})} className="border-2 border-gray-300 px-4 py-3 w-full" />
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-semibold mb-2">HOA</label>
-                                            <input type="number" value={borrowerInfo.monthlyHOA} onChange={(e) => setBorrowerInfo({...borrowerInfo, monthlyHOA: e.target.value})} className="border-2 border-gray-300 px-4 py-3 w-full" />
-                                        </div>
-                                        {isRefi && (
-                                            <div>
-                                                <label className="block text-sm font-semibold mb-2">CURRENT PAYMENT</label>
-                                                <input type="number" value={borrowerInfo.currentMonthlyPayment} onChange={(e) => setBorrowerInfo({...borrowerInfo, currentMonthlyPayment: e.target.value})} className="border-2 border-gray-300 px-4 py-3 w-full" />
-                                            </div>
-                                        )}
+                                        <div><label className="block text-sm font-semibold mb-2">MONTHLY TAX</label><input type="number" value={borrowerInfo.monthlyTax} onChange={e => setBorrowerInfo({...borrowerInfo, monthlyTax: e.target.value})} className="border-2 border-gray-300 px-4 py-3 focus:border-black outline-none w-full" /></div>
+                                        <div><label className="block text-sm font-semibold mb-2">MONTHLY INSURANCE</label><input type="number" value={borrowerInfo.monthlyInsurance} onChange={e => setBorrowerInfo({...borrowerInfo, monthlyInsurance: e.target.value})} className="border-2 border-gray-300 px-4 py-3 focus:border-black outline-none w-full" /></div>
+                                        <div><label className="block text-sm font-semibold mb-2">MONTHLY HOA</label><input type="number" value={borrowerInfo.monthlyHOA} onChange={e => setBorrowerInfo({...borrowerInfo, monthlyHOA: e.target.value})} className="border-2 border-gray-300 px-4 py-3 focus:border-black outline-none w-full" /></div>
+                                        {isRefi && <div><label className="block text-sm font-semibold mb-2">CURRENT PAYMENT</label><input type="number" value={borrowerInfo.currentMonthlyPayment} onChange={e => setBorrowerInfo({...borrowerInfo, currentMonthlyPayment: e.target.value})} className="border-2 border-gray-300 px-4 py-3 focus:border-black outline-none w-full" /></div>}
                                     </div>
                                     {isRefi && (
                                         <div className="grid grid-cols-2 gap-4 mb-4">
-                                            <div>
-                                                <label className="block text-sm font-semibold mb-2">CURRENT RATE (%)</label>
-                                                <input type="number" step="0.001" value={borrowerInfo.currentRate} onChange={(e) => setBorrowerInfo({...borrowerInfo, currentRate: e.target.value})} className="border-2 border-gray-300 px-4 py-3 w-full" />
-                                            </div>
-                                            <div>
-                                                <label className="block text-sm font-semibold mb-2">ESCROW BALANCE ($) *</label>
-                                                <input type="number" value={borrowerInfo.estimatedEscrow} onChange={(e) => setBorrowerInfo({...borrowerInfo, estimatedEscrow: e.target.value})} className="border-2 border-purple-500 px-4 py-3 w-full" />
-                                                <p className="text-xs text-gray-600 mt-1">💡 Refunded by current lender!</p>
-                                            </div>
+                                            <div><label className="block text-sm font-semibold mb-2">CURRENT INTEREST RATE (%)</label><input type="number" step="0.001" value={borrowerInfo.currentRate} onChange={e => setBorrowerInfo({...borrowerInfo, currentRate: e.target.value})} className="border-2 border-gray-300 px-4 py-3 focus:border-black outline-none w-full" /></div>
+                                            <div><label className="block text-sm font-semibold mb-2">ESTIMATED ESCROW BALANCE ($)</label><input type="number" value={borrowerInfo.estimatedEscrow} onChange={e => setBorrowerInfo({...borrowerInfo, estimatedEscrow: e.target.value})} className="border-2 border-gray-300 px-4 py-3 focus:border-black outline-none w-full" /><p className="text-xs text-gray-600 mt-1">This gets refunded by your current lender</p></div>
                                         </div>
                                     )}
                                     {isVA && (
                                         <div className="flex gap-6 mt-4">
-                                            <label className="flex items-center gap-2 cursor-pointer">
-                                                <input type="checkbox" checked={borrowerInfo.vaFundingFeeExempt} onChange={(e) => setBorrowerInfo({...borrowerInfo, vaFundingFeeExempt: e.target.checked})} className="w-5 h-5" />
-                                                <span className="font-semibold">VA Funding Fee Exempt</span>
-                                            </label>
-                                            <label className="flex items-center gap-2 cursor-pointer">
-                                                <input type="checkbox" checked={borrowerInfo.rollCostsIntoLoan} onChange={(e) => setBorrowerInfo({...borrowerInfo, rollCostsIntoLoan: e.target.checked})} className="w-5 h-5" />
-                                                <span className="font-semibold">Roll Costs Into Loan</span>
-                                            </label>
+                                            <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={borrowerInfo.vaFundingFeeExempt} onChange={e => setBorrowerInfo({...borrowerInfo, vaFundingFeeExempt: e.target.checked})} className="w-5 h-5" /><span className="font-semibold">VA Funding Fee Exempt (Disability)</span></label>
+                                            <label className="flex items-center gap-2 cursor-pointer"><input type="checkbox" checked={borrowerInfo.rollCostsIntoLoan} onChange={e => setBorrowerInfo({...borrowerInfo, rollCostsIntoLoan: e.target.checked})} className="w-5 h-5" /><span className="font-semibold">Roll Costs Into Loan</span></label>
                                         </div>
                                     )}
                                 </div>
@@ -682,33 +449,20 @@
                                 {/* LOAN OPTIONS */}
                                 <div className="border-2 border-black p-6">
                                     <div className="flex justify-between items-center mb-6">
-                                        <h2 className="text-2xl font-bold">RATE OPTIONS (MAX 3)</h2>
-                                        {loanOptions.length < 3 && (
-                                            <button onClick={addOption} className="bg-black text-white px-4 py-2 font-semibold flex items-center gap-2">
-                                                <Icon name="Plus" size={18} /> ADD
-                                            </button>
-                                        )}
+                                        <h2 className="text-2xl font-bold">LOAN OPTIONS (30-YEAR FIXED)</h2>
+                                        {loanOptions.length < 3 && <button onClick={addOption} className="bg-black text-white px-4 py-2 font-semibold flex items-center gap-2 hover:bg-gray-800"><Icon name="Plus" size={18} /> ADD OPTION</button>}
                                     </div>
                                     <div className="space-y-4">
-                                        {loanOptions.map((option) => (
-                                            <div key={option.id} className="border-2 border-gray-300 p-4">
+                                        {loanOptions.map(opt => (
+                                            <div key={opt.id} className="border-2 border-gray-300 p-4">
                                                 <div className="flex justify-between items-start mb-4">
-                                                    <input type="text" value={option.name} onChange={(e) => updateOption(option.id, 'name', e.target.value)} className="text-lg font-bold border-b-2 border-transparent hover:border-gray-300 focus:border-black outline-none" />
-                                                    {loanOptions.length > 1 && <button onClick={() => removeOption(option.id)} className="text-red-600"><Icon name="Trash2" size={20} /></button>}
+                                                    <input value={opt.name} onChange={e => updateOption(opt.id, 'name', e.target.value)} className="text-lg font-bold border-b-2 border-transparent hover:border-gray-300 focus:border-black outline-none" />
+                                                    {loanOptions.length > 1 && <button onClick={() => removeOption(opt.id)} className="text-red-600 hover:text-red-800"><Icon name="Trash2" size={20} /></button>}
                                                 </div>
                                                 <div className="grid grid-cols-3 gap-4">
-                                                    <div>
-                                                        <label className="block text-sm font-semibold mb-2">RATE (%)</label>
-                                                        <input type="number" step="0.001" value={option.rate} onChange={(e) => updateOption(option.id, 'rate', e.target.value)} className="border-2 border-gray-300 px-4 py-3 w-full" />
-                                                    </div>
-                                                    <div>
-                                                        <label className="block text-sm font-semibold mb-2">POINTS ($)</label>
-                                                        <input type="number" value={option.points} onChange={(e) => updateOption(option.id, 'points', parseFloat(e.target.value) || 0)} className="border-2 border-gray-300 px-4 py-3 w-full" />
-                                                    </div>
-                                                    <div>
-                                                        <label className="block text-sm font-semibold mb-2">LENDER CREDIT ($)</label>
-                                                        <input type="number" value={option.lenderCredit} onChange={(e) => updateOption(option.id, 'lenderCredit', parseFloat(e.target.value) || 0)} className="border-2 border-gray-300 px-4 py-3 w-full" />
-                                                    </div>
+                                                    <div><label className="block text-sm font-semibold mb-2">RATE (%)</label><input type="number" step="0.001" value={opt.rate} onChange={e => updateOption(opt.id, 'rate', e.target.value)} className="border-2 border-gray-300 px-4 py-3 focus:border-black outline-none w-full" /></div>
+                                                    <div><label className="block text-sm font-semibold mb-2">POINTS ($)</label><input type="number" value={opt.points} onChange={e => updateOption(opt.id, 'points', parseFloat(e.target.value) || 0)} className="border-2 border-gray-300 px-4 py-3 focus:border-black outline-none w-full" /></div>
+                                                    <div><label className="block text-sm font-semibold mb-2">LENDER CREDIT ($)</label><input type="number" value={opt.lenderCredit} onChange={e => updateOption(opt.id, 'lenderCredit', parseFloat(e.target.value) || 0)} className="border-2 border-gray-300 px-4 py-3 focus:border-black outline-none w-full" /></div>
                                                 </div>
                                             </div>
                                         ))}
@@ -716,20 +470,10 @@
                                 </div>
                             </div>
                         ) : (
-                            /* PREVIEW VIEW */
+                            /* ==================== PREVIEW - BOLD STYLE ==================== */
                             <div className="space-y-8">
-                                <div className="flex justify-between items-center no-print">
-                                    <button onClick={() => setShowComparison(!showComparison)} className="bg-purple-600 text-white px-6 py-3 font-bold">
-                                        {showComparison ? '📋 DETAILED' : '📊 COMPARE'}
-                                    </button>
-                                    <div className="flex gap-4">
-                                        <button onClick={() => window.print()} className="bg-gray-800 text-white px-6 py-3 font-semibold flex items-center gap-2">
-                                            <Icon name="Download" size={18} /> PRINT PDF
-                                        </button>
-                                        <button onClick={sendOffer} className="bg-black text-white px-6 py-3 font-semibold flex items-center gap-2">
-                                            <Icon name="Send" size={18} /> SEND
-                                        </button>
-                                    </div>
+                                <div className="flex justify-end gap-4 no-print">
+                                    <button onClick={() => window.print()} className="bg-gray-800 text-white px-6 py-3 font-semibold flex items-center gap-2 hover:bg-gray-700"><Icon name="Download" size={18} /> PRINT / SAVE PDF</button>
                                 </div>
 
                                 <div className="border-4 border-black p-12 bg-white">
@@ -743,7 +487,7 @@
                                     <div className="bg-black text-white p-6 mb-8">
                                         <div className="flex items-center gap-4">
                                             <div className="w-16 h-16 bg-white text-black rounded-full flex items-center justify-center text-2xl font-bold">
-                                                {loanOfficer.name.split(' ').map(n => n[0]).join('').toUpperCase() || 'LO'}
+                                                {loanOfficer.name.split(' ').map(n => n[0]).join('').toUpperCase()}
                                             </div>
                                             <div>
                                                 <h3 className="text-xl font-bold">{loanOfficer.name}</h3>
@@ -753,66 +497,72 @@
                                         </div>
                                     </div>
 
-                                    {/* GREETING */}
+                                    {/* BORROWER */}
                                     <div className="mb-8">
-                                        <h2 className="text-3xl font-bold mb-4">Hi {borrowerInfo.name.split(' ')[0]}! 👋</h2>
-                                        <p className="text-gray-700 text-lg">Here are your personalized {borrowerInfo.program} options.</p>
+                                        <h2 className="text-3xl font-bold mb-4">Hi {borrowerInfo.name.split(' ')[0]}!</h2>
+                                        <p className="text-gray-700 text-lg">Here are your personalized {borrowerInfo.program} loan options for {borrowerInfo.address}, {borrowerInfo.city}, {borrowerInfo.state} {borrowerInfo.zip}.</p>
                                     </div>
 
-                                    {/* SKIP PAYMENTS */}
-                                    {displayOptions.showSkipPayments && isRefi && currentPayment > 0 && (
-                                        <div className="bg-gradient-to-r from-emerald-500 to-green-600 text-white p-8 mb-6 rounded-lg">
-                                            <div className="flex items-center justify-between">
-                                                <div>
-                                                    <p className="text-lg opacity-90">SKIP {displayOptions.paymentsToSkip} MORTGAGE PAYMENTS</p>
-                                                    <p className="text-5xl font-bold">${fmt(skipPaymentValue)} IN YOUR POCKET</p>
-                                                </div>
-                                                <div className="text-8xl">💰</div>
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {/* VA IRRRL BANNER */}
+                                    {/* VA IRRRL BANNER - BOLD STYLE */}
                                     {isIRRRL && (
-                                        <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6 mb-6 rounded-lg">
-                                            <div className="flex items-center gap-3 mb-4">
-                                                <Icon name="Shield" size={32} />
-                                                <span className="text-2xl font-bold">VA IRRRL REFINANCE</span>
-                                            </div>
+                                        <div className="bg-black text-white p-6 mb-8">
+                                            <h3 className="text-2xl font-bold mb-4">VA IRRRL REFINANCE</h3>
                                             <div className="grid grid-cols-3 gap-6 text-center">
-                                                <div><p className="font-semibold">✓ NO INCOME</p><p className="text-sm opacity-80">Verification</p></div>
-                                                <div><p className="font-semibold">✓ NO APPRAISAL</p><p className="text-sm opacity-80">Needed</p></div>
-                                                <div><p className="font-semibold">⚡ 7-10 DAYS</p><p className="text-sm opacity-80">To Close</p></div>
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {/* ESCROW REFUND */}
-                                    {displayOptions.showEscrowRefund && isRefi && escrowRefund > 0 && (
-                                        <div className="bg-gradient-to-r from-purple-500 to-purple-600 text-white p-6 mb-6 rounded-lg">
-                                            <div className="flex items-center justify-between">
                                                 <div>
-                                                    <p className="text-sm opacity-90">ESCROW REFUND FROM CURRENT LENDER*</p>
-                                                    <p className="text-4xl font-bold">${fmt(escrowRefund)} COMING BACK TO YOU</p>
+                                                    <div className="text-3xl font-bold mb-2">✓</div>
+                                                    <div className="font-semibold">NO INCOME</div>
+                                                    <div className="text-sm text-gray-300">Verification Required</div>
                                                 </div>
-                                                <div className="text-6xl">💵</div>
+                                                <div>
+                                                    <div className="text-3xl font-bold mb-2">✓</div>
+                                                    <div className="font-semibold">NO APPRAISAL</div>
+                                                    <div className="text-sm text-gray-300">Needed</div>
+                                                </div>
+                                                <div>
+                                                    <div className="text-3xl font-bold mb-2">⚡</div>
+                                                    <div className="font-semibold">CLOSE IN 7-10 DAYS</div>
+                                                    <div className="text-sm text-gray-300">Fast Processing</div>
+                                                </div>
                                             </div>
-                                            <p className="text-xs opacity-75 mt-3">*Estimated. Actual amount may vary.</p>
                                         </div>
                                     )}
 
-                                    {/* CURRENT VS NEW */}
+                                    {/* SKIP PAYMENTS - GREEN BOX */}
+                                    {displayOptions.showSkipPayments && isRefi && skipValue > 0 && (
+                                        <div className="bg-green-50 border-4 border-green-600 p-6 mb-6">
+                                            <div className="text-center">
+                                                <div className="text-5xl font-bold text-green-600 mb-2">${fmt(skipValue)}</div>
+                                                <h3 className="text-2xl font-bold mb-2">SKIP {displayOptions.paymentsToSkip} MORTGAGE PAYMENTS</h3>
+                                                <p className="text-gray-700">Keep this money in your pocket during the refinance process. Your first payment isn't due for approximately {displayOptions.paymentsToSkip + 1} months after closing.</p>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* ESCROW REFUND - PURPLE BOX */}
+                                    {displayOptions.showEscrowRefund && isRefi && escrowRefund > 0 && (
+                                        <div className="bg-purple-50 border-4 border-purple-600 p-6 mb-6">
+                                            <div className="flex justify-between items-center">
+                                                <div>
+                                                    <p className="text-sm font-semibold text-purple-800 mb-1">ESCROW REFUND FROM CURRENT LENDER*</p>
+                                                    <p className="text-4xl font-bold text-purple-600">${fmt(escrowRefund)}</p>
+                                                </div>
+                                            </div>
+                                            <p className="text-xs text-purple-700 mt-3">*Estimated refund from your current lender's escrow account after payoff. Actual amount may vary.</p>
+                                        </div>
+                                    )}
+
+                                    {/* RATE COMPARISON */}
                                     {displayOptions.showCurrentVsNew && isRefi && borrowerInfo.currentRate && (
-                                        <div className="bg-white border-4 border-gray-200 p-8 mb-8 rounded-lg">
+                                        <div className="border-4 border-gray-300 p-8 mb-8">
                                             <div className="text-center mb-4">
                                                 <span className="text-xl font-bold">YOUR RATE DROP</span>
                                             </div>
                                             <div className="flex items-center justify-center gap-12">
                                                 <div className="text-center">
-                                                    <p className="text-sm text-gray-500 uppercase mb-2">Current</p>
+                                                    <p className="text-sm text-gray-500 uppercase mb-2">Current Rate</p>
                                                     <p className="text-5xl font-bold text-red-500">{borrowerInfo.currentRate}%</p>
                                                 </div>
-                                                <Icon name="ArrowRight" size={48} className="text-green-500" />
+                                                <div className="text-4xl">→</div>
                                                 <div className="text-center">
                                                     <p className="text-sm text-gray-500 uppercase mb-2">New Rate</p>
                                                     <p className="text-5xl font-bold text-green-500">{lowestRate.toFixed(3)}%</p>
@@ -822,125 +572,113 @@
                                     )}
 
                                     {/* TOTAL BENEFITS SUMMARY */}
-                                    {isRefi && (displayOptions.showSkipPayments || displayOptions.showEscrowRefund) && (
-                                        <div className="bg-gradient-to-r from-gray-800 to-gray-900 text-white p-8 mb-8 rounded-lg">
+                                    {isRefi && (skipValue > 0 || escrowRefund > 0) && (
+                                        <div className="bg-gray-900 text-white p-8 mb-8">
                                             <div className="text-center mb-6">
-                                                <p className="text-lg opacity-80">TOTAL IMMEDIATE BENEFITS</p>
+                                                <p className="text-lg font-medium text-gray-300">TOTAL IMMEDIATE BENEFITS</p>
                                             </div>
                                             <div className="grid grid-cols-3 gap-6 text-center">
-                                                {displayOptions.showSkipPayments && currentPayment > 0 && (
+                                                {skipValue > 0 && (
                                                     <div>
-                                                        <p className="text-sm opacity-70">Skip Payments</p>
-                                                        <p className="text-3xl font-bold text-green-400">+${fmt(skipPaymentValue)}</p>
+                                                        <p className="text-sm text-gray-400">Skip Payments</p>
+                                                        <p className="text-3xl font-bold text-green-400">+${fmt(skipValue)}</p>
                                                     </div>
                                                 )}
-                                                {displayOptions.showEscrowRefund && escrowRefund > 0 && (
+                                                {escrowRefund > 0 && (
                                                     <div>
-                                                        <p className="text-sm opacity-70">Escrow Refund*</p>
+                                                        <p className="text-sm text-gray-400">Escrow Refund*</p>
                                                         <p className="text-3xl font-bold text-purple-400">+${fmt(escrowRefund)}</p>
                                                     </div>
                                                 )}
                                                 <div>
-                                                    <p className="text-sm opacity-70">Cash From You</p>
+                                                    <p className="text-sm text-gray-400">Cash to Close</p>
                                                     <p className="text-3xl font-bold text-blue-400">$0</p>
                                                 </div>
                                             </div>
                                             <div className="text-center mt-6 pt-6 border-t border-gray-700">
-                                                <p className="text-sm opacity-70">TOTAL CASH IN YOUR POCKET</p>
-                                                <p className="text-5xl font-bold text-green-400">
-                                                    ${fmt((displayOptions.showSkipPayments ? skipPaymentValue : 0) + (displayOptions.showEscrowRefund ? escrowRefund : 0))}
-                                                </p>
+                                                <p className="text-sm text-gray-400">TOTAL CASH IN YOUR POCKET</p>
+                                                <p className="text-5xl font-bold text-green-400">${fmt(skipValue + escrowRefund)}</p>
                                             </div>
                                         </div>
                                     )}
 
                                     {/* LOAN OPTIONS CARDS */}
                                     <h3 className="text-2xl font-bold mb-6">YOUR OPTIONS</h3>
-                                    <div className="grid gap-6 mb-8" style={{gridTemplateColumns: `repeat(${Math.min(loanOptions.length, 3)}, 1fr)`}}>
-                                        {loanOptions.map((option, index) => {
-                                            const payment = calculateFullPayment(borrowerInfo.loanAmount, option.rate, borrowerInfo.propertyValue);
-                                            const apr = calculateAPR(borrowerInfo.loanAmount, option.rate);
-                                            const costs = calculateClosingCosts(borrowerInfo.loanAmount, option.points, option.lenderCredit);
-                                            const monthlySavings = currentPayment - payment.total;
-                                            const cashToClose = borrowerInfo.rollCostsIntoLoan ? 0 : costs.total;
-                                            const totalInterest = calculateTotalInterest(borrowerInfo.loanAmount, option.rate);
-                                            const lifetimeCost = parseFloat(borrowerInfo.loanAmount) + totalInterest + costs.total;
+                                    <div className="grid gap-6 mb-8" style={{gridTemplateColumns: `repeat(${loanOptions.length}, 1fr)`}}>
+                                        {loanOptions.map((opt, idx) => {
+                                            const pmt = calculatePayment(borrowerInfo.loanAmount, opt.rate);
+                                            const apr = calculateAPR(borrowerInfo.loanAmount, opt.rate);
+                                            const costs = calculateCosts(borrowerInfo.loanAmount, opt.points, opt.lenderCredit);
+                                            const savings = currentPmt - pmt.total;
+                                            const cash = borrowerInfo.rollCostsIntoLoan ? 0 : costs.total;
 
                                             return (
-                                                <div key={option.id} className="border-4 border-gray-300 p-6">
+                                                <div key={opt.id} className="border-4 border-gray-300 p-6">
                                                     <div className="text-center mb-6">
-                                                        <p className="text-sm font-semibold text-gray-600 mb-2">INTEREST RATE</p>
-                                                        <p className="text-5xl font-bold">{option.rate}%</p>
+                                                        <p className="text-sm font-semibold text-gray-600 mb-2">{opt.name.toUpperCase()}</p>
+                                                        <p className="text-5xl font-bold mb-1">{opt.rate}%</p>
                                                         <p className="text-sm text-gray-600">APR: {apr.toFixed(3)}%</p>
                                                     </div>
 
-                                                    {displayOptions.showMonthlySavings && monthlySavings > 0 && (
+                                                    {displayOptions.showMonthlySavings && savings > 0 && (
                                                         <div className="bg-green-100 border-2 border-green-600 p-4 mb-4 text-center">
-                                                            <p className="text-sm font-bold text-green-800">MONTHLY SAVINGS</p>
-                                                            <p className="text-3xl font-bold text-green-600">${fmt(monthlySavings)}</p>
+                                                            <p className="text-sm font-bold text-green-800 mb-1">MONTHLY SAVINGS</p>
+                                                            <p className="text-3xl font-bold text-green-600">${fmt(savings)}</p>
+                                                            <p className="text-xs text-green-800 mt-1">vs. current payment</p>
                                                         </div>
                                                     )}
-
-                                                    <div className="bg-black text-white p-4 text-center mb-6">
-                                                        <p className="text-sm">{option.name.toUpperCase()}</p>
-                                                        {option.points > 0 && <p className="text-xs">${option.points.toLocaleString()} points</p>}
-                                                        {option.lenderCredit > 0 && <p className="text-xs">${option.lenderCredit.toLocaleString()} lender credit</p>}
-                                                    </div>
 
                                                     <div className="border-4 border-black p-4 bg-white mb-4">
-                                                        <p className="text-xs text-gray-600 mb-1">MONTHLY PAYMENT</p>
-                                                        <p className="text-4xl font-bold">${fmt(payment.total)}</p>
-                                                        <div className="text-xs space-y-1 mt-2">
-                                                            <div className="flex justify-between"><span>P&I</span><span>${fmt(payment.pi)}</span></div>
-                                                            {payment.tax > 0 && <div className="flex justify-between"><span>Tax</span><span>${fmt(payment.tax)}</span></div>}
-                                                            {payment.insurance > 0 && <div className="flex justify-between"><span>Insurance</span><span>${fmt(payment.insurance)}</span></div>}
+                                                        <p className="text-xs text-gray-600 mb-1">ESTIMATED MONTHLY PAYMENT</p>
+                                                        <p className="text-4xl font-bold mb-3">${fmt(pmt.total)}</p>
+                                                        <div className="text-xs space-y-1">
+                                                            <div className="flex justify-between"><span className="text-gray-600">Principal & Interest</span><span>${fmt(pmt.pi)}</span></div>
+                                                            {pmt.tax > 0 && <div className="flex justify-between"><span className="text-gray-600">Property Taxes</span><span>${fmt(pmt.tax)}</span></div>}
+                                                            {pmt.ins > 0 && <div className="flex justify-between"><span className="text-gray-600">Insurance</span><span>${fmt(pmt.ins)}</span></div>}
+                                                            {pmt.hoa > 0 && <div className="flex justify-between"><span className="text-gray-600">HOA</span><span>${fmt(pmt.hoa)}</span></div>}
                                                         </div>
                                                     </div>
 
-                                                    <div className={`p-4 text-center ${cashToClose === 0 ? 'bg-green-100 border-4 border-green-600' : 'bg-gray-100 border-2 border-gray-300'}`}>
+                                                    <div className={`p-4 text-center ${cash === 0 ? 'bg-green-100 border-4 border-green-600' : 'bg-gray-100 border-2 border-gray-300'}`}>
                                                         <p className="text-xs text-gray-600 mb-1">CASH TO CLOSE</p>
-                                                        <p className={`text-3xl font-bold ${cashToClose === 0 ? 'text-green-600' : ''}`}>${fmt(cashToClose)}</p>
+                                                        <p className={`text-3xl font-bold ${cash === 0 ? 'text-green-600' : ''}`}>${fmt(cash)}</p>
                                                     </div>
 
-                                                    {displayOptions.showLifetimeCost && (
-                                                        <div className="bg-orange-100 border-2 border-orange-600 p-4 mt-4">
-                                                            <p className="text-sm font-bold text-orange-800">LIFETIME COST</p>
-                                                            <p className="text-2xl font-bold text-orange-600">${fmt(lifetimeCost)}</p>
-                                                        </div>
-                                                    )}
+                                                    <div className="mt-4 text-center text-sm text-gray-600">
+                                                        {opt.points > 0 && <p>${opt.points.toLocaleString()} in discount points</p>}
+                                                        {opt.lenderCredit > 0 && <p>${opt.lenderCredit.toLocaleString()} lender credit</p>}
+                                                        {opt.points === 0 && opt.lenderCredit === 0 && <p>No points or credits</p>}
+                                                    </div>
                                                 </div>
                                             );
                                         })}
                                     </div>
 
+                                    {/* DISCLAIMER */}
+                                    <div className="bg-gray-100 border-l-4 border-black p-4 mb-8 text-xs text-gray-700">
+                                        <p className="font-semibold mb-2">IMPORTANT DISCLOSURES:</p>
+                                        <p>All figures shown are estimates. Actual costs, rates, and payments may vary. This is not a Loan Estimate or loan commitment. Rates subject to change without notice. All loans subject to credit approval. NMLS #{loanOfficer.companyNMLS}. Equal Housing Lender.</p>
+                                    </div>
+
                                     {/* CTA */}
                                     <div className="bg-black text-white p-12 text-center">
-                                        <div className="mb-4 bg-white text-black inline-block px-4 py-2 text-sm font-bold">⚡ SOFT PULL ONLY</div>
+                                        <div className="mb-4 bg-white text-black inline-block px-4 py-2 text-sm font-bold">SOFT PULL ONLY - NO CREDIT SCORE IMPACT</div>
                                         <h3 className="text-3xl font-bold mb-4">READY TO MOVE FORWARD?</h3>
-                                        <button onClick={() => setShowApp(true)} className="bg-white text-black px-12 py-4 text-xl font-bold hover:bg-gray-200">
-                                            ★ START APPLICATION →
-                                        </button>
+                                        <p className="text-gray-300 mb-6 text-lg">Lock in your rate and secure your loan by starting your application today.</p>
+                                        <button onClick={() => setShowApp(true)} className="bg-white text-black px-12 py-4 text-xl font-bold hover:bg-gray-200">START MY APPLICATION →</button>
                                     </div>
 
                                     {/* CONTACT */}
-                                    <div className="mt-8 text-center pt-8 border-t-2 border-gray-200">
-                                        <h4 className="font-bold mb-4">QUESTIONS?</h4>
+                                    <div className="mt-8 text-center border-t-2 border-gray-200 pt-8">
+                                        <h4 className="font-bold mb-4">GOT QUESTIONS?</h4>
                                         <div className="flex justify-center gap-8">
-                                            <a href={`tel:${loanOfficer.phone}`} className="flex items-center gap-2">
-                                                <Icon name="Phone" size={20} />
-                                                <span>{loanOfficer.phone}</span>
+                                            <a href={`tel:${loanOfficer.phone}`} className="flex items-center gap-2 text-black hover:underline font-semibold">
+                                                <Icon name="Phone" size={20} /> {loanOfficer.phone}
                                             </a>
-                                            <a href={`sms:${loanOfficer.phone}`} className="flex items-center gap-2">
-                                                <Icon name="MessageSquare" size={20} />
-                                                <span>Text Me</span>
+                                            <a href={`sms:${loanOfficer.phone}`} className="flex items-center gap-2 text-black hover:underline font-semibold">
+                                                <Icon name="MessageSquare" size={20} /> Text Me
                                             </a>
                                         </div>
-                                    </div>
-
-                                    {/* DISCLAIMER */}
-                                    <div className="mt-8 bg-gray-100 p-4 text-xs text-gray-600">
-                                        <p className="font-semibold mb-2">DISCLOSURES:</p>
-                                        <p>All figures are estimates. This is not a Loan Estimate or commitment. Rates subject to change. All loans subject to credit approval. NMLS #{loanOfficer.companyNMLS}. Equal Housing Lender.</p>
                                     </div>
                                 </div>
                             </div>
@@ -950,7 +688,7 @@
             );
         }
 
-        ReactDOM.createRoot(document.getElementById('root')).render(<LoanOfferDashboard />);
+        ReactDOM.createRoot(document.getElementById('root')).render(<App />);
     </script>
 </body>
 </html>
