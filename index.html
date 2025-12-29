@@ -50,40 +50,57 @@
             const [borrowerInfo, setBorrowerInfo] = useState({
                 name: 'John Martinez', email: 'john.martinez@email.com', phone: '949-555-1234',
                 address: '123 Ocean View Drive', city: 'Irvine', state: 'CA', zip: '92618',
-                loanAmount: '450000', propertyValue: '650000', downPayment: '',
+                loanAmount: '450000', propertyValue: '650000',
                 program: 'VA IRRRL', loanPurpose: 'Refinance',
-                vaFirstTimeUse: true, vaFundingFeeExempt: false, llpaExempt: true,
-                currentMonthlyPayment: '3250', currentRate: '7.250', estimatedEscrow: '4200',
-                monthlyTax: '680', monthlyInsurance: '195', monthlyHOA: '0', rollCostsIntoLoan: true
+                vaFundingFeeExempt: false, rollCostsIntoLoan: true,
+                currentRate: '7.250', currentPayment: '3250', estimatedEscrow: '4200',
+                monthlyTax: '680', monthlyInsurance: '195', monthlyHOA: '0'
             });
 
             const [displayOptions, setDisplayOptions] = useState({
-                showFullBreakdown: true, showMonthlySavings: true, showSkipPayments: true,
-                paymentsToSkip: 2, showEscrowRefund: true, showCurrentVsNew: true, showLifetimeCost: false
+                showMonthlySavings: true, showSkipPayments: true,
+                paymentsToSkip: 2, showEscrowRefund: true, showCurrentVsNew: true
             });
 
             const [loanOfficer, setLoanOfficer] = useState({
                 name: 'Steven Anderson', nmls: '123456', phone: '7143005428',
                 email: 'steven@oakstonecapitalmortgage.com',
-                companyName: 'Oakstone Capital Mortgage', companyNMLS: '2585868', logoUrl: ''
+                companyName: 'Oakstone Capital Mortgage', companyNMLS: '2585868'
             });
 
             const [appSettings, setAppSettings] = useState({
-                appType: 'arrive', arriveUrl: 'https://2585868.myagentloans.com/register', customAppUrl: ''
+                arriveUrl: 'https://2585868.myagentloans.com/register', customAppUrl: ''
             });
 
             const [customFees, setCustomFees] = useState({
                 originationFee: '4500', processingFee: '495', underwritingFee: '895',
-                appraisalFee: '0', creditReport: '0', floodCert: '15', taxService: '85',
-                titleInsurance: '950', titleSettlement: '650', titleSearch: '275',
-                recording: '350', survey: '0', llpaFee: '', fundingFee: ''
+                titleInsurance: '950', titleSettlement: '650', recording: '350'
             });
 
             const [loanOptions, setLoanOptions] = useState([
-                { id: 1, name: 'Buy Down', rate: '5.875', term: 30, points: 4000, lenderCredit: 0 },
-                { id: 2, name: 'No Points', rate: '6.250', term: 30, points: 0, lenderCredit: 0 },
-                { id: 3, name: 'No Cost', rate: '6.625', term: 30, points: 0, lenderCredit: 5500 }
+                { id: 1, name: 'Option 1', rate: '5.875', term: 30, points: 4000, lenderCredit: 0 },
+                { id: 2, name: 'Option 2', rate: '6.250', term: 30, points: 0, lenderCredit: 0 }
             ]);
+
+            // Zillow lookup function
+            const openZillow = () => {
+                const address = borrowerInfo.address.trim();
+                const city = borrowerInfo.city.trim();
+                const state = borrowerInfo.state.trim();
+                const zip = borrowerInfo.zip.trim();
+                
+                if (!address || !city || !state) {
+                    alert('Please enter address, city, and state first');
+                    return;
+                }
+                
+                // Format for Zillow search - replace spaces with dashes, create proper URL
+                const formattedAddress = address.replace(/\s+/g, '-').replace(/[^\w-]/g, '');
+                const formattedCity = city.replace(/\s+/g, '-');
+                const fullAddress = `${formattedAddress}-${formattedCity}-${state}${zip ? '-' + zip : ''}`;
+                
+                window.open(`https://www.zillow.com/homes/${fullAddress}_rb/`, '_blank');
+            };
 
             useEffect(() => {
                 const params = new URLSearchParams(window.location.search);
@@ -223,65 +240,25 @@
                 return { pi, tax, ins, hoa, total: pi + tax + ins + hoa };
             };
 
-            const getVAFundingFee = (amt) => {
-                if (customFees.fundingFee) return parseFloat(customFees.fundingFee);
-                if (borrowerInfo.vaFundingFeeExempt) return 0;
-                if (borrowerInfo.program === 'VA IRRRL') return parseFloat(amt) * 0.005;
-                return 0;
-            };
-
             const calculateCosts = (amt, pts, credit) => {
-                const sA = {
-                    origination: parseFloat(customFees.originationFee) || parseFloat(amt) * 0.01,
-                    processing: parseFloat(customFees.processingFee) || 495,
-                    underwriting: parseFloat(customFees.underwritingFee) || 895
-                };
-                const sB = {
-                    appraisal: parseFloat(customFees.appraisalFee) || 0,
-                    credit: parseFloat(customFees.creditReport) || 0,
-                    flood: parseFloat(customFees.floodCert) || 15,
-                    tax: parseFloat(customFees.taxService) || 85
-                };
-                const sC = {
-                    titleIns: parseFloat(customFees.titleInsurance) || 800,
-                    settlement: parseFloat(customFees.titleSettlement) || 600,
-                    search: parseFloat(customFees.titleSearch) || 250,
-                    recording: parseFloat(customFees.recording) || 350
-                };
-                const funding = getVAFundingFee(amt);
-                const totA = Object.values(sA).reduce((a, b) => a + b, 0);
-                const totB = Object.values(sB).reduce((a, b) => a + b, 0);
-                const totC = Object.values(sC).reduce((a, b) => a + b, 0);
-                const total = totA + totB + totC + funding + (parseFloat(pts) || 0) - (parseFloat(credit) || 0);
-                return { sA, sB, sC, funding, totA, totB, totC, total };
+                const total = (parseFloat(customFees.originationFee) || 0) + 
+                    (parseFloat(customFees.processingFee) || 0) + 
+                    (parseFloat(customFees.underwritingFee) || 0) +
+                    (parseFloat(customFees.titleInsurance) || 0) +
+                    (parseFloat(customFees.titleSettlement) || 0) +
+                    (parseFloat(customFees.recording) || 0) +
+                    (parseFloat(pts) || 0) - (parseFloat(credit) || 0);
+                return total;
             };
-
-            const calculateAPR = (amt, rate, termYears = 30) => {
-                if (!amt || !rate) return parseFloat(rate) || 0;
-                const costs = calculateCosts(amt, 0, 0);
-                const P = parseFloat(amt);
-                const r = parseFloat(rate) / 100 / 12;
-                const impact = (costs.total / P) / termYears / 12;
-                return (r + impact) * 12 * 100;
-            };
-
-            const addOption = () => {
-                if (loanOptions.length < 3) {
-                    setLoanOptions([...loanOptions, { id: Date.now(), name: `Option ${loanOptions.length + 1}`, rate: '', term: 30, points: 0, lenderCredit: 0 }]);
-                }
-            };
-
-            const removeOption = (id) => { if (loanOptions.length > 1) setLoanOptions(loanOptions.filter(o => o.id !== id)); };
-            const updateOption = (id, field, val) => setLoanOptions(loanOptions.map(o => o.id === id ? { ...o, [field]: val } : o));
 
             const isIRRRL = borrowerInfo.program === 'VA IRRRL';
             const isVA = borrowerInfo.program === 'VA' || isIRRRL;
             const isRefi = borrowerInfo.loanPurpose === 'Refinance' || borrowerInfo.loanPurpose === 'Cash-Out Refi' || isIRRRL;
 
-            const currentPmt = parseFloat(borrowerInfo.currentMonthlyPayment) || 0;
+            const currentPmt = parseFloat(borrowerInfo.currentPayment) || 0;
+            const currentRate = parseFloat(borrowerInfo.currentRate) || 0;
             const escrowRefund = parseFloat(borrowerInfo.estimatedEscrow) || 0;
             const skipValue = displayOptions.paymentsToSkip * currentPmt;
-            const lowestRate = Math.min(...loanOptions.map(o => parseFloat(o.rate) || 99));
 
             const fmt = (n) => Math.round(n).toLocaleString();
 
@@ -365,11 +342,6 @@
                                             {linkCopied ? 'COPIED!' : 'COPY LINK'}
                                         </button>
                                     </div>
-                                    {generatedLink && (
-                                        <div className="mt-4 p-3 bg-white border-2 border-green-400 text-xs break-all text-gray-600">
-                                            {generatedLink}
-                                        </div>
-                                    )}
                                 </div>
 
                                 {/* LO PROFILE */}
@@ -395,12 +367,12 @@
                                     <h2 className="text-xl md:text-2xl font-bold mb-4 md:mb-6">DISPLAY OPTIONS</h2>
                                     <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                                         {[
-                                            ['showMonthlySavings', 'Monthly Savings'],
-                                            ['showSkipPayments', 'Skip Payments'],
-                                            ['showEscrowRefund', 'Escrow Refund'],
-                                            ['showCurrentVsNew', 'Rate Comparison'],
+                                            ['showMonthlySavings', '💰 Monthly Savings'],
+                                            ['showSkipPayments', '⏭️ Skip Payments'],
+                                            ['showEscrowRefund', '💵 Escrow Refund'],
+                                            ['showCurrentVsNew', '📉 Rate Comparison'],
                                         ].map(([k, label]) => (
-                                            <label key={k} className="flex items-center gap-2 p-3 bg-white border-2 border-gray-300 cursor-pointer">
+                                            <label key={k} className={`flex items-center gap-2 p-3 border-2 cursor-pointer ${displayOptions[k] ? 'bg-green-100 border-green-600' : 'bg-white border-gray-300'}`}>
                                                 <input type="checkbox" checked={displayOptions[k]} onChange={e => setDisplayOptions({...displayOptions, [k]: e.target.checked})} className="w-5 h-5" />
                                                 <span className="font-semibold text-sm">{label}</span>
                                             </label>
@@ -444,7 +416,7 @@
                                                     {searchLeads(searchQuery).map((l, i) => (
                                                         <div key={i} onClick={() => selectLead(l)} className="p-3 hover:bg-purple-100 cursor-pointer border-b">
                                                             <p className="font-bold">{l.name}</p>
-                                                            <p className="text-xs text-gray-600">{l.email}</p>
+                                                            <p className="text-xs text-gray-600">{l.address}, {l.city}</p>
                                                         </div>
                                                     ))}
                                                 </div>
@@ -454,27 +426,20 @@
 
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                                         <input placeholder="Name" value={borrowerInfo.name} onChange={e => setBorrowerInfo({...borrowerInfo, name: e.target.value})} className="border-2 border-gray-300 px-3 py-2" />
-                                        <input placeholder="Email" value={borrowerInfo.email} onChange={e => setBorrowerInfo({...borrowerInfo, email: e.target.value})} className="border-2 border-gray-300 px-3 py-2" />
-                                        <input placeholder="Phone" value={borrowerInfo.phone} onChange={e => setBorrowerInfo({...borrowerInfo, phone: e.target.value})} className="border-2 border-gray-300 px-3 py-2 md:col-span-2" />
+                                        <input placeholder="Phone" value={borrowerInfo.phone} onChange={e => setBorrowerInfo({...borrowerInfo, phone: e.target.value})} className="border-2 border-gray-300 px-3 py-2" />
                                         <input placeholder="Address" value={borrowerInfo.address} onChange={e => setBorrowerInfo({...borrowerInfo, address: e.target.value})} className="border-2 border-gray-300 px-3 py-2 md:col-span-2" />
                                         <input placeholder="City" value={borrowerInfo.city} onChange={e => setBorrowerInfo({...borrowerInfo, city: e.target.value})} className="border-2 border-gray-300 px-3 py-2" />
                                         <div className="flex gap-2">
-                                            <input placeholder="State" value={borrowerInfo.state} onChange={e => setBorrowerInfo({...borrowerInfo, state: e.target.value})} className="border-2 border-gray-300 px-3 py-2 flex-1" />
+                                            <input placeholder="State" value={borrowerInfo.state} onChange={e => setBorrowerInfo({...borrowerInfo, state: e.target.value})} className="border-2 border-gray-300 px-3 py-2 w-20" />
                                             <input placeholder="ZIP" value={borrowerInfo.zip} onChange={e => setBorrowerInfo({...borrowerInfo, zip: e.target.value})} className="border-2 border-gray-300 px-3 py-2 flex-1" />
                                         </div>
                                     </div>
                                 </div>
 
-                                {/* LOAN DETAILS */}
+                                {/* PROPERTY & LOAN */}
                                 <div className="border-2 border-black p-4 md:p-6">
-                                    <h2 className="text-xl md:text-2xl font-bold mb-4 md:mb-6">LOAN DETAILS</h2>
-                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
-                                        <div>
-                                            <label className="block text-xs font-semibold mb-1">PURPOSE</label>
-                                            <select value={borrowerInfo.loanPurpose} onChange={e => setBorrowerInfo({...borrowerInfo, loanPurpose: e.target.value})} className="border-2 border-gray-300 px-3 py-2 w-full text-sm">
-                                                <option>Purchase</option><option>Refinance</option><option>Cash-Out Refi</option>
-                                            </select>
-                                        </div>
+                                    <h2 className="text-xl md:text-2xl font-bold mb-4 md:mb-6">PROPERTY & LOAN</h2>
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
                                         <div>
                                             <label className="block text-xs font-semibold mb-1">PROGRAM</label>
                                             <select value={borrowerInfo.program} onChange={e => setBorrowerInfo({...borrowerInfo, program: e.target.value})} className="border-2 border-gray-300 px-3 py-2 w-full text-sm">
@@ -482,63 +447,81 @@
                                             </select>
                                         </div>
                                         <div>
-                                            <label className="block text-xs font-semibold mb-1">LOAN AMT</label>
+                                            <label className="block text-xs font-semibold mb-1">LOAN AMOUNT</label>
                                             <input type="number" value={borrowerInfo.loanAmount} onChange={e => setBorrowerInfo({...borrowerInfo, loanAmount: e.target.value})} className="border-2 border-gray-300 px-3 py-2 w-full" />
                                         </div>
-                                        <div>
-                                            <label className="block text-xs font-semibold mb-1">VALUE</label>
-                                            <input type="number" value={borrowerInfo.propertyValue} onChange={e => setBorrowerInfo({...borrowerInfo, propertyValue: e.target.value})} className="border-2 border-gray-300 px-3 py-2 w-full" />
+                                        <div className="col-span-2">
+                                            <label className="block text-xs font-semibold mb-1">PROPERTY VALUE</label>
+                                            <div className="flex gap-2">
+                                                <input type="number" value={borrowerInfo.propertyValue} onChange={e => setBorrowerInfo({...borrowerInfo, propertyValue: e.target.value})} className="border-2 border-gray-300 px-3 py-2 flex-1" />
+                                                <button onClick={openZillow} className="bg-blue-600 text-white px-4 py-2 font-bold text-sm hover:bg-blue-700 flex items-center gap-1">
+                                                    <Icon name="ExternalLink" size={16} /> ZILLOW
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
-                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+                                    <div className="grid grid-cols-3 md:grid-cols-3 gap-3">
                                         <div><label className="block text-xs font-semibold mb-1">TAX/MO</label><input type="number" value={borrowerInfo.monthlyTax} onChange={e => setBorrowerInfo({...borrowerInfo, monthlyTax: e.target.value})} className="border-2 border-gray-300 px-3 py-2 w-full" /></div>
                                         <div><label className="block text-xs font-semibold mb-1">INS/MO</label><input type="number" value={borrowerInfo.monthlyInsurance} onChange={e => setBorrowerInfo({...borrowerInfo, monthlyInsurance: e.target.value})} className="border-2 border-gray-300 px-3 py-2 w-full" /></div>
                                         <div><label className="block text-xs font-semibold mb-1">HOA</label><input type="number" value={borrowerInfo.monthlyHOA} onChange={e => setBorrowerInfo({...borrowerInfo, monthlyHOA: e.target.value})} className="border-2 border-gray-300 px-3 py-2 w-full" /></div>
-                                        {isRefi && <div><label className="block text-xs font-semibold mb-1">CURRENT PMT</label><input type="number" value={borrowerInfo.currentMonthlyPayment} onChange={e => setBorrowerInfo({...borrowerInfo, currentMonthlyPayment: e.target.value})} className="border-2 border-gray-300 px-3 py-2 w-full" /></div>}
                                     </div>
-                                    {isRefi && (
-                                        <div className="grid grid-cols-2 gap-3 mb-3">
-                                            <div><label className="block text-xs font-semibold mb-1">CURRENT RATE %</label><input type="number" step="0.001" value={borrowerInfo.currentRate} onChange={e => setBorrowerInfo({...borrowerInfo, currentRate: e.target.value})} className="border-2 border-gray-300 px-3 py-2 w-full" /></div>
-                                            <div><label className="block text-xs font-semibold mb-1">ESCROW BAL</label><input type="number" value={borrowerInfo.estimatedEscrow} onChange={e => setBorrowerInfo({...borrowerInfo, estimatedEscrow: e.target.value})} className="border-2 border-gray-300 px-3 py-2 w-full" /></div>
-                                        </div>
-                                    )}
                                     {isVA && (
-                                        <div className="flex flex-wrap gap-4 mt-3">
+                                        <div className="flex flex-wrap gap-4 mt-4">
                                             <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={borrowerInfo.vaFundingFeeExempt} onChange={e => setBorrowerInfo({...borrowerInfo, vaFundingFeeExempt: e.target.checked})} className="w-4 h-4" /> VA Fee Exempt</label>
                                             <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={borrowerInfo.rollCostsIntoLoan} onChange={e => setBorrowerInfo({...borrowerInfo, rollCostsIntoLoan: e.target.checked})} className="w-4 h-4" /> Roll Costs In</label>
                                         </div>
                                     )}
                                 </div>
 
-                                {/* RATE OPTIONS */}
-                                <div className="border-2 border-black p-4 md:p-6">
-                                    <div className="flex justify-between items-center mb-4 md:mb-6">
-                                        <h2 className="text-xl md:text-2xl font-bold">RATE OPTIONS</h2>
-                                        {loanOptions.length < 3 && <button onClick={addOption} className="bg-black text-white px-3 py-2 text-sm font-semibold flex items-center gap-1"><Icon name="Plus" size={16} /> ADD</button>}
+                                {/* CURRENT SCENARIO */}
+                                <div className="border-4 border-red-500 p-4 md:p-6 bg-red-50">
+                                    <h2 className="text-xl md:text-2xl font-bold mb-4 text-red-800">📍 CURRENT SCENARIO</h2>
+                                    <div className="grid grid-cols-3 gap-3">
+                                        <div>
+                                            <label className="block text-xs font-semibold mb-1">CURRENT RATE %</label>
+                                            <input type="number" step="0.001" value={borrowerInfo.currentRate} onChange={e => setBorrowerInfo({...borrowerInfo, currentRate: e.target.value})} className="border-2 border-red-400 px-3 py-2 w-full text-lg font-bold" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-semibold mb-1">CURRENT PAYMENT</label>
+                                            <input type="number" value={borrowerInfo.currentPayment} onChange={e => setBorrowerInfo({...borrowerInfo, currentPayment: e.target.value})} className="border-2 border-red-400 px-3 py-2 w-full text-lg font-bold" />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-semibold mb-1">ESCROW BAL</label>
+                                            <input type="number" value={borrowerInfo.estimatedEscrow} onChange={e => setBorrowerInfo({...borrowerInfo, estimatedEscrow: e.target.value})} className="border-2 border-gray-300 px-3 py-2 w-full" />
+                                        </div>
                                     </div>
+                                </div>
+
+                                {/* NEW OPTIONS */}
+                                <div className="border-4 border-green-500 p-4 md:p-6 bg-green-50">
+                                    <h2 className="text-xl md:text-2xl font-bold mb-4 text-green-800">✨ NEW OPTIONS</h2>
                                     <div className="space-y-4">
-                                        {loanOptions.map(opt => (
-                                            <div key={opt.id} className="border-2 border-gray-300 p-3 md:p-4">
-                                                <div className="flex justify-between items-start mb-3">
-                                                    <input value={opt.name} onChange={e => updateOption(opt.id, 'name', e.target.value)} className="text-lg font-bold border-b-2 border-transparent focus:border-black outline-none" />
-                                                    {loanOptions.length > 1 && <button onClick={() => removeOption(opt.id)} className="text-red-600 p-1"><Icon name="Trash2" size={18} /></button>}
-                                                </div>
-                                                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                                                    <div><label className="block text-xs font-semibold mb-1">RATE %</label><input type="number" step="0.001" value={opt.rate} onChange={e => updateOption(opt.id, 'rate', e.target.value)} className="border-2 border-gray-300 px-3 py-2 w-full" /></div>
-                                                    <div>
-                                                        <label className="block text-xs font-semibold mb-1">TERM</label>
-                                                        <select value={opt.term} onChange={e => updateOption(opt.id, 'term', parseInt(e.target.value))} className="border-2 border-gray-300 px-3 py-2 w-full">
-                                                            <option value={10}>10 Year</option>
-                                                            <option value={15}>15 Year</option>
-                                                            <option value={20}>20 Year</option>
-                                                            <option value={30}>30 Year</option>
-                                                        </select>
+                                        {loanOptions.map((opt, idx) => {
+                                            const pmt = calculatePayment(borrowerInfo.loanAmount, opt.rate, opt.term || 30);
+                                            const savings = currentPmt - pmt.total;
+                                            return (
+                                                <div key={opt.id} className="border-2 border-green-400 p-4 bg-white">
+                                                    <div className="flex justify-between items-center mb-3">
+                                                        <input value={opt.name} onChange={e => setLoanOptions(loanOptions.map(o => o.id === opt.id ? {...o, name: e.target.value} : o))} className="text-lg font-bold border-b-2 border-transparent focus:border-green-600 outline-none" />
+                                                        {savings > 0 && <span className="bg-green-600 text-white px-3 py-1 text-sm font-bold">SAVES ${fmt(savings)}/mo</span>}
                                                     </div>
-                                                    <div><label className="block text-xs font-semibold mb-1">POINTS $</label><input type="number" value={opt.points} onChange={e => updateOption(opt.id, 'points', parseFloat(e.target.value) || 0)} className="border-2 border-gray-300 px-3 py-2 w-full" /></div>
-                                                    <div><label className="block text-xs font-semibold mb-1">CREDIT $</label><input type="number" value={opt.lenderCredit} onChange={e => updateOption(opt.id, 'lenderCredit', parseFloat(e.target.value) || 0)} className="border-2 border-gray-300 px-3 py-2 w-full" /></div>
+                                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                                        <div><label className="block text-xs font-semibold mb-1">RATE %</label><input type="number" step="0.001" value={opt.rate} onChange={e => setLoanOptions(loanOptions.map(o => o.id === opt.id ? {...o, rate: e.target.value} : o))} className="border-2 border-gray-300 px-3 py-2 w-full" /></div>
+                                                        <div>
+                                                            <label className="block text-xs font-semibold mb-1">TERM</label>
+                                                            <select value={opt.term} onChange={e => setLoanOptions(loanOptions.map(o => o.id === opt.id ? {...o, term: parseInt(e.target.value)} : o))} className="border-2 border-gray-300 px-3 py-2 w-full">
+                                                                <option value={10}>10 Year</option>
+                                                                <option value={15}>15 Year</option>
+                                                                <option value={20}>20 Year</option>
+                                                                <option value={30}>30 Year</option>
+                                                            </select>
+                                                        </div>
+                                                        <div><label className="block text-xs font-semibold mb-1">POINTS $</label><input type="number" value={opt.points} onChange={e => setLoanOptions(loanOptions.map(o => o.id === opt.id ? {...o, points: parseFloat(e.target.value) || 0} : o))} className="border-2 border-gray-300 px-3 py-2 w-full" /></div>
+                                                        <div><label className="block text-xs font-semibold mb-1">CREDIT $</label><input type="number" value={opt.lenderCredit} onChange={e => setLoanOptions(loanOptions.map(o => o.id === opt.id ? {...o, lenderCredit: parseFloat(e.target.value) || 0} : o))} className="border-2 border-gray-300 px-3 py-2 w-full" /></div>
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        ))}
+                                            );
+                                        })}
                                     </div>
                                 </div>
 
@@ -587,46 +570,90 @@
                                     {/* BORROWER */}
                                     <div className="mb-6 md:mb-8">
                                         <h2 className="text-2xl md:text-3xl font-bold mb-2 md:mb-4">Hi {borrowerInfo.name.split(' ')[0]}!</h2>
-                                        <p className="text-gray-700 text-sm md:text-lg">Here are your personalized {borrowerInfo.program} loan options for {borrowerInfo.address}, {borrowerInfo.city}, {borrowerInfo.state} {borrowerInfo.zip}.</p>
+                                        <p className="text-gray-700 text-sm md:text-lg">Here's your personalized {borrowerInfo.program} comparison for {borrowerInfo.address}, {borrowerInfo.city}, {borrowerInfo.state}.</p>
                                     </div>
 
                                     {/* VA IRRRL BANNER */}
                                     {isIRRRL && (
                                         <div className="bg-black text-white p-4 md:p-6 mb-6 md:mb-8">
-                                            <h3 className="text-xl md:text-2xl font-bold mb-4">VA IRRRL REFINANCE</h3>
+                                            <h3 className="text-xl md:text-2xl font-bold mb-4 text-center">VA IRRRL BENEFITS</h3>
                                             <div className="grid grid-cols-3 gap-2 md:gap-6 text-center">
                                                 <div>
-                                                    <div className="text-2xl md:text-3xl font-bold mb-1 md:mb-2">✓</div>
+                                                    <div className="text-2xl md:text-3xl font-bold mb-1">✓</div>
                                                     <div className="font-semibold text-xs md:text-base">NO INCOME</div>
-                                                    <div className="text-xs text-gray-300 hidden md:block">Verification Required</div>
                                                 </div>
                                                 <div>
-                                                    <div className="text-2xl md:text-3xl font-bold mb-1 md:mb-2">✓</div>
+                                                    <div className="text-2xl md:text-3xl font-bold mb-1">✓</div>
                                                     <div className="font-semibold text-xs md:text-base">NO APPRAISAL</div>
-                                                    <div className="text-xs text-gray-300 hidden md:block">Needed</div>
                                                 </div>
                                                 <div>
-                                                    <div className="text-2xl md:text-3xl font-bold mb-1 md:mb-2">⚡</div>
+                                                    <div className="text-2xl md:text-3xl font-bold mb-1">⚡</div>
                                                     <div className="font-semibold text-xs md:text-base">7-10 DAYS</div>
-                                                    <div className="text-xs text-gray-300 hidden md:block">Fast Close</div>
                                                 </div>
                                             </div>
                                         </div>
                                     )}
 
+                                    {/* ========== COMPARISON: CURRENT vs OPTIONS ========== */}
+                                    <h3 className="text-xl md:text-2xl font-bold mb-4 text-center">YOUR RATE & PAYMENT COMPARISON</h3>
+                                    <div className="grid grid-cols-3 gap-2 md:gap-6 mb-6 md:mb-8">
+                                        {/* CURRENT SCENARIO */}
+                                        <div className="border-4 border-red-500 p-3 md:p-6 bg-red-50">
+                                            <div className="text-center">
+                                                <p className="text-xs md:text-sm font-bold text-red-700 mb-2">CURRENT</p>
+                                                <p className="text-2xl md:text-5xl font-bold text-red-600 mb-1">{currentRate}%</p>
+                                                <p className="text-xs md:text-sm text-gray-600 mb-3">Rate</p>
+                                                <div className="border-t-2 border-red-300 pt-3">
+                                                    <p className="text-xs text-gray-600">Payment</p>
+                                                    <p className="text-xl md:text-3xl font-bold text-red-600">${fmt(currentPmt)}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* NEW OPTIONS */}
+                                        {loanOptions.map((opt) => {
+                                            const pmt = calculatePayment(borrowerInfo.loanAmount, opt.rate, opt.term || 30);
+                                            const savings = currentPmt - pmt.total;
+                                            const costs = calculateCosts(borrowerInfo.loanAmount, opt.points, opt.lenderCredit);
+                                            const cash = borrowerInfo.rollCostsIntoLoan ? 0 : costs;
+
+                                            return (
+                                                <div key={opt.id} className="border-4 border-green-500 p-3 md:p-6 bg-green-50">
+                                                    <div className="text-center">
+                                                        <p className="text-xs md:text-sm font-bold text-green-700 mb-2">{opt.name.toUpperCase()}</p>
+                                                        <p className="text-2xl md:text-5xl font-bold text-green-600 mb-1">{opt.rate}%</p>
+                                                        <p className="text-xs md:text-sm text-gray-600 mb-3">{opt.term || 30}-Year Fixed</p>
+                                                        <div className="border-t-2 border-green-300 pt-3">
+                                                            <p className="text-xs text-gray-600">Payment</p>
+                                                            <p className="text-xl md:text-3xl font-bold text-green-600">${fmt(pmt.total)}</p>
+                                                        </div>
+
+                                                        {/* MONTHLY SAVINGS HIGHLIGHT */}
+                                                        {displayOptions.showMonthlySavings && savings > 0 && (
+                                                            <div className="mt-3 bg-green-600 text-white p-2 md:p-3">
+                                                                <p className="text-xs font-bold">YOU SAVE</p>
+                                                                <p className="text-lg md:text-2xl font-bold">${fmt(savings)}/mo</p>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+
                                     {/* SKIP PAYMENTS */}
-                                    {displayOptions.showSkipPayments && isRefi && skipValue > 0 && (
+                                    {displayOptions.showSkipPayments && skipValue > 0 && (
                                         <div className="bg-green-50 border-4 border-green-600 p-4 md:p-6 mb-4 md:mb-6">
                                             <div className="text-center">
                                                 <div className="text-3xl md:text-5xl font-bold text-green-600 mb-2">${fmt(skipValue)}</div>
                                                 <h3 className="text-lg md:text-2xl font-bold mb-2">SKIP {displayOptions.paymentsToSkip} PAYMENTS</h3>
-                                                <p className="text-gray-700 text-sm md:text-base">Keep this money in your pocket during the refinance.</p>
+                                                <p className="text-gray-700 text-sm">Keep this money in your pocket during the refinance.</p>
                                             </div>
                                         </div>
                                     )}
 
                                     {/* ESCROW REFUND */}
-                                    {displayOptions.showEscrowRefund && isRefi && escrowRefund > 0 && (
+                                    {displayOptions.showEscrowRefund && escrowRefund > 0 && (
                                         <div className="bg-purple-50 border-4 border-purple-600 p-4 md:p-6 mb-4 md:mb-6">
                                             <p className="text-xs md:text-sm font-semibold text-purple-800 mb-1">ESCROW REFUND*</p>
                                             <p className="text-2xl md:text-4xl font-bold text-purple-600">${fmt(escrowRefund)}</p>
@@ -634,100 +661,25 @@
                                         </div>
                                     )}
 
-                                    {/* RATE COMPARISON */}
-                                    {displayOptions.showCurrentVsNew && isRefi && borrowerInfo.currentRate && (
-                                        <div className="border-4 border-gray-300 p-4 md:p-8 mb-6 md:mb-8">
-                                            <div className="text-center mb-4">
-                                                <span className="text-lg md:text-xl font-bold">YOUR RATE DROP</span>
-                                            </div>
-                                            <div className="flex items-center justify-center gap-4 md:gap-12">
-                                                <div className="text-center">
-                                                    <p className="text-xs md:text-sm text-gray-500 uppercase mb-1 md:mb-2">Current</p>
-                                                    <p className="text-3xl md:text-5xl font-bold text-red-500">{borrowerInfo.currentRate}%</p>
-                                                </div>
-                                                <div className="text-2xl md:text-4xl">→</div>
-                                                <div className="text-center">
-                                                    <p className="text-xs md:text-sm text-gray-500 uppercase mb-1 md:mb-2">New</p>
-                                                    <p className="text-3xl md:text-5xl font-bold text-green-500">{lowestRate.toFixed(3)}%</p>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    )}
-
                                     {/* TOTAL BENEFITS */}
-                                    {isRefi && (skipValue > 0 || escrowRefund > 0) && (
+                                    {(skipValue > 0 || escrowRefund > 0) && (
                                         <div className="bg-gray-900 text-white p-4 md:p-8 mb-6 md:mb-8">
-                                            <div className="text-center mb-4 md:mb-6">
-                                                <p className="text-sm md:text-lg font-medium text-gray-300">TOTAL BENEFITS</p>
-                                            </div>
-                                            <div className="grid grid-cols-3 gap-2 md:gap-6 text-center">
-                                                {skipValue > 0 && (
-                                                    <div>
-                                                        <p className="text-xs text-gray-400">Skip Pmts</p>
-                                                        <p className="text-xl md:text-3xl font-bold text-green-400">+${fmt(skipValue)}</p>
-                                                    </div>
-                                                )}
-                                                {escrowRefund > 0 && (
-                                                    <div>
-                                                        <p className="text-xs text-gray-400">Escrow</p>
-                                                        <p className="text-xl md:text-3xl font-bold text-purple-400">+${fmt(escrowRefund)}</p>
-                                                    </div>
-                                                )}
-                                                <div>
-                                                    <p className="text-xs text-gray-400">Cash Close</p>
-                                                    <p className="text-xl md:text-3xl font-bold text-blue-400">$0</p>
+                                            <div className="text-center">
+                                                <p className="text-sm md:text-lg font-medium text-gray-300 mb-4">TOTAL CASH IN YOUR POCKET</p>
+                                                <p className="text-4xl md:text-6xl font-bold text-green-400">${fmt(skipValue + escrowRefund)}</p>
+                                                <div className="flex justify-center gap-4 md:gap-8 mt-4 text-sm">
+                                                    {skipValue > 0 && <span className="text-gray-400">Skip Payments: +${fmt(skipValue)}</span>}
+                                                    {escrowRefund > 0 && <span className="text-gray-400">Escrow: +${fmt(escrowRefund)}</span>}
                                                 </div>
-                                            </div>
-                                            <div className="text-center mt-4 md:mt-6 pt-4 md:pt-6 border-t border-gray-700">
-                                                <p className="text-xs md:text-sm text-gray-400">TOTAL CASH IN POCKET</p>
-                                                <p className="text-3xl md:text-5xl font-bold text-green-400">${fmt(skipValue + escrowRefund)}</p>
                                             </div>
                                         </div>
                                     )}
 
-                                    {/* LOAN OPTIONS */}
-                                    <h3 className="text-xl md:text-2xl font-bold mb-4 md:mb-6">YOUR OPTIONS</h3>
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6 mb-6 md:mb-8">
-                                        {loanOptions.map((opt) => {
-                                            const pmt = calculatePayment(borrowerInfo.loanAmount, opt.rate, opt.term || 30);
-                                            const apr = calculateAPR(borrowerInfo.loanAmount, opt.rate, opt.term || 30);
-                                            const costs = calculateCosts(borrowerInfo.loanAmount, opt.points, opt.lenderCredit);
-                                            const savings = currentPmt - pmt.total;
-                                            const cash = borrowerInfo.rollCostsIntoLoan ? 0 : costs.total;
-
-                                            return (
-                                                <div key={opt.id} className="border-4 border-gray-300 p-4 md:p-6">
-                                                    <div className="text-center mb-4 md:mb-6">
-                                                        <p className="text-xs md:text-sm font-semibold text-gray-600 mb-1">{opt.name.toUpperCase()}</p>
-                                                        <p className="text-3xl md:text-5xl font-bold mb-1">{opt.rate}%</p>
-                                                        <p className="text-sm md:text-base font-semibold text-gray-800">{opt.term || 30}-Year Fixed</p>
-                                                        <p className="text-xs md:text-sm text-gray-600">APR: {apr.toFixed(3)}%</p>
-                                                    </div>
-
-                                                    {displayOptions.showMonthlySavings && savings > 0 && (
-                                                        <div className="bg-green-100 border-2 border-green-600 p-3 md:p-4 mb-3 md:mb-4 text-center">
-                                                            <p className="text-xs md:text-sm font-bold text-green-800 mb-1">MONTHLY SAVINGS</p>
-                                                            <p className="text-2xl md:text-3xl font-bold text-green-600">${fmt(savings)}</p>
-                                                        </div>
-                                                    )}
-
-                                                    <div className="border-4 border-black p-3 md:p-4 bg-white mb-3 md:mb-4">
-                                                        <p className="text-xs text-gray-600 mb-1">MONTHLY PAYMENT</p>
-                                                        <p className="text-2xl md:text-4xl font-bold mb-2 md:mb-3">${fmt(pmt.total)}</p>
-                                                        <div className="text-xs space-y-1">
-                                                            <div className="flex justify-between"><span>P&I</span><span>${fmt(pmt.pi)}</span></div>
-                                                            {pmt.tax > 0 && <div className="flex justify-between"><span>Tax</span><span>${fmt(pmt.tax)}</span></div>}
-                                                            {pmt.ins > 0 && <div className="flex justify-between"><span>Ins</span><span>${fmt(pmt.ins)}</span></div>}
-                                                        </div>
-                                                    </div>
-
-                                                    <div className={`p-3 md:p-4 text-center ${cash === 0 ? 'bg-green-100 border-4 border-green-600' : 'bg-gray-100 border-2 border-gray-300'}`}>
-                                                        <p className="text-xs text-gray-600 mb-1">CASH TO CLOSE</p>
-                                                        <p className={`text-2xl md:text-3xl font-bold ${cash === 0 ? 'text-green-600' : ''}`}>${fmt(cash)}</p>
-                                                    </div>
-                                                </div>
-                                            );
-                                        })}
+                                    {/* CASH TO CLOSE */}
+                                    <div className="bg-green-100 border-4 border-green-600 p-4 md:p-6 mb-6 md:mb-8 text-center">
+                                        <p className="text-sm font-bold text-green-800 mb-1">CASH TO CLOSE</p>
+                                        <p className="text-3xl md:text-5xl font-bold text-green-600">$0</p>
+                                        <p className="text-xs text-green-700 mt-2">Costs rolled into loan</p>
                                     </div>
 
                                     {/* DISCLAIMER */}
